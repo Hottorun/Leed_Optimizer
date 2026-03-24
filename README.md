@@ -11,10 +11,12 @@ api:
   "phone": "+1234567890",
   "email": "customer@email.com",
   "location": "City, State",
-  "workType": "Type of work needed",
-  "conversationSummary": "AI summary of the conversation",
-  "approveMessage": "Pre-crafted approval response",
-  "declineMessage": "Pre-crafted decline response"
+  "workType": "Type of work",
+  "conversationSummary": "AI summary",
+  "approveMessage": "Pre-crafted approval",
+  "declineMessage": "Pre-crafted decline",
+  "rating": 4,
+  "ratingReason": "Good fit - in our service area with matching work type"
 }
 ```
 
