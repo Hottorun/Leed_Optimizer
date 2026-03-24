@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock, MapPin, Briefcase, Mail, Phone } from "lucide-react"
+import { Clock, MapPin, Briefcase, Mail, Phone, Star } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import type { Lead, LeadStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -26,6 +26,12 @@ function formatTimeAgo(dateString: string): string {
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
   return `${Math.floor(diffInSeconds / 86400)}d ago`
+}
+
+function getRatingColor(rating: number): string {
+  if (rating >= 4) return "text-primary"
+  if (rating >= 3) return "text-chart-3"
+  return "text-destructive"
 }
 
 export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
@@ -60,6 +66,28 @@ export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
         <Badge variant="outline" className={cn("shrink-0 text-xs", status.className)}>
           {status.label}
         </Badge>
+      </div>
+
+      {/* Rating Section */}
+      <div className="mt-3 flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2">
+        <div className="flex items-center gap-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star
+              key={i}
+              className={cn(
+                "h-3.5 w-3.5",
+                i < lead.rating ? getRatingColor(lead.rating) : "text-muted-foreground/30"
+              )}
+              fill={i < lead.rating ? "currentColor" : "none"}
+            />
+          ))}
+        </div>
+        <span className={cn("text-xs font-medium", getRatingColor(lead.rating))}>
+          {lead.rating}/5
+        </span>
+        <span className="text-xs text-muted-foreground truncate">
+          - {lead.ratingReason}
+        </span>
       </div>
 
       <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">

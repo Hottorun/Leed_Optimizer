@@ -13,6 +13,7 @@ import {
   XCircle,
   Check,
   Loader2,
+  Star,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -43,7 +44,19 @@ function formatDate(dateString: string): string {
   })
 }
 
-export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage }: LeadDetailPanelProps) {
+function getRatingColor(rating: number): string {
+  if (rating >= 4) return "text-primary"
+  if (rating >= 3) return "text-chart-3"
+  return "text-destructive"
+}
+
+function getRatingBgColor(rating: number): string {
+  if (rating >= 4) return "bg-primary/10 border-primary/20"
+  if (rating >= 3) return "bg-chart-3/10 border-chart-3/20"
+  return "bg-destructive/10 border-destructive/20"
+}
+
+export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPanelProps) {
   const [approveMessage, setApproveMessage] = useState(lead.approveMessage)
   const [declineMessage, setDeclineMessage] = useState(lead.declineMessage)
   const [isSending, setIsSending] = useState<"approve" | "decline" | null>(null)
@@ -93,6 +106,31 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage }: Lead
               <span>{lead.workType}</span>
             </div>
           </div>
+        </div>
+
+        {/* AI Rating Section */}
+        <div className={cn("mt-6 rounded-lg border p-4", getRatingBgColor(lead.rating))}>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">AI Rating</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={cn(
+                      "h-4 w-4",
+                      i < lead.rating ? getRatingColor(lead.rating) : "text-muted-foreground/30"
+                    )}
+                    fill={i < lead.rating ? "currentColor" : "none"}
+                  />
+                ))}
+              </div>
+              <span className={cn("text-sm font-semibold", getRatingColor(lead.rating))}>
+                {lead.rating}/5
+              </span>
+            </div>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">{lead.ratingReason}</p>
         </div>
 
         {/* Contact Details */}

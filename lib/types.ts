@@ -10,6 +10,8 @@ export interface Lead {
   conversationSummary: string
   approveMessage: string
   declineMessage: string
+  rating: number // 1-5 star rating from AI
+  ratingReason: string // AI explanation for the rating
   status: LeadStatus
   createdAt: string
   updatedAt: string
@@ -32,6 +34,8 @@ export interface IncomingLead {
   conversationSummary: string
   approveMessage: string
   declineMessage: string
+  rating: number // 1-5
+  ratingReason: string // e.g., "Not in our area", "Perfect fit", etc.
 }
 
 // Response sent back to chatbot when user sends a message

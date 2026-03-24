@@ -1,5 +1,6 @@
 import type { Lead } from "./types"
 
+// Mock data for local development when Supabase is not connected
 export const mockLeads: Lead[] = [
   {
     id: "lead-001",
@@ -11,6 +12,8 @@ export const mockLeads: Lead[] = [
     conversationSummary: "Customer is looking to renovate their kitchen. They want modern cabinets, quartz countertops, and new appliances. Budget is around $25,000-$35,000. Timeline is flexible but preferably within 3 months.",
     approveMessage: "Hi Sarah! Thank you for reaching out. We'd love to help with your kitchen renovation. Our team specializes in modern kitchen designs and we can definitely work within your budget. Would you be available for a free consultation this week?",
     declineMessage: "Hi Sarah, thank you for your interest. Unfortunately, we're currently at full capacity for new kitchen projects. We recommend reaching out to [Alternative Company] who does excellent work in your area.",
+    rating: 5,
+    ratingReason: "Excellent lead! High budget, in our service area, and work type matches our expertise perfectly.",
     status: "pending",
     createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
@@ -25,6 +28,8 @@ export const mockLeads: Lead[] = [
     conversationSummary: "Business owner needs office space build-out for a new tech startup. Looking for an open floor plan with 4 private offices, a conference room, and a break room. Space is approximately 3,500 sq ft. Needs completion within 6 weeks.",
     approveMessage: "Hello Michael! We're excited about your office build-out project. Our commercial team has extensive experience with tech startup spaces. We can definitely meet your 6-week timeline. Can we schedule a site visit this week to discuss details?",
     declineMessage: "Hello Michael, we appreciate you considering us for your office project. Unfortunately, our commercial team is fully booked for the next 2 months and won't be able to meet your timeline. We suggest contacting [Commercial Builders Inc] for faster availability.",
+    rating: 4,
+    ratingReason: "Great commercial opportunity. Tight timeline might be challenging but doable.",
     status: "pending",
     createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
@@ -39,7 +44,9 @@ export const mockLeads: Lead[] = [
     conversationSummary: "Homeowner wants to remodel master bathroom. Interested in walk-in shower, double vanity, and heated floors. Has seen our previous work on Instagram and loves the modern aesthetic. Budget is $15,000-$20,000.",
     approveMessage: "Hi Emma! Thank you for reaching out and for the kind words about our Instagram portfolio! We'd be thrilled to help with your bathroom remodel. A walk-in shower with heated floors is one of our specialties. Let's set up a time to discuss your vision!",
     declineMessage: "Hi Emma, thank you for your interest in our services. Unfortunately, we don't currently serve the Austin, TX area. We recommend checking out [Local Austin Renovations] who has a similar design aesthetic.",
-    status: "approved",
+    rating: 2,
+    ratingReason: "Not in our service area - Austin, TX is outside our coverage zone.",
+    status: "pending",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
   },
@@ -53,6 +60,8 @@ export const mockLeads: Lead[] = [
     conversationSummary: "Customer wants a new composite deck built in their backyard. Approximately 400 sq ft with built-in seating and lighting. Has HOA approval already. Looking to start in spring.",
     approveMessage: "Hi David! A composite deck with built-in seating sounds fantastic! We love that you've already gotten HOA approval - that makes things much smoother. Spring is a great time to start. Would you like to schedule a free estimate?",
     declineMessage: "Hi David, thank you for considering us for your deck project. Unfortunately, we're not taking on new deck construction projects at this time as we're focusing on interior renovations. We recommend [Outdoor Living Experts] for deck work.",
+    rating: 3,
+    ratingReason: "Moderate fit - we do decks but it's not our specialty. Customer is well-prepared.",
     status: "pending",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
@@ -67,6 +76,8 @@ export const mockLeads: Lead[] = [
     conversationSummary: "Family needs a 600 sq ft home addition for a new nursery and home office. Want it to match existing home exterior. Have architectural plans already drawn up. Budget is $80,000-$100,000.",
     approveMessage: "Hello Lisa! Congratulations on the growing family! A home addition for a nursery and office is a wonderful project. Having architectural plans ready is a great start. We'd love to review them and provide a detailed estimate. When works best for you?",
     declineMessage: "Hello Lisa, thank you for reaching out about your home addition. Unfortunately, our schedule doesn't allow us to take on additions of this scope at the moment. We recommend contacting [Premier Home Additions] who specializes in this type of work.",
+    rating: 1,
+    ratingReason: "Outside service area and we don't do home additions currently.",
     status: "declined",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),

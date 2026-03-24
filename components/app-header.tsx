@@ -1,6 +1,6 @@
 "use client"
 
-import { Search, RefreshCw, Bell } from "lucide-react"
+import { Search, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AppHeaderProps {
@@ -35,12 +35,6 @@ export function AppHeader({ searchQuery, onSearchChange, onRefresh, isRefreshing
           className="relative"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-        </Button>
-        <Button variant="outline" size="icon" className="relative">
-          <Bell className="h-4 w-4" />
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-            3
-          </span>
         </Button>
       </div>
     </header>

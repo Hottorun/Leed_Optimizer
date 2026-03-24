@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
-import { getLeadById, updateLead } from "@/lib/leads-store"
+import { getLeadById, updateLead } from "@/lib/supabase"
 import type { SendMessageResponse, LeadStatus } from "@/lib/types"
 
-// This endpoint sends a message back to your chatbot
-// Configure CHATBOT_WEBHOOK_URL in your environment variables
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -20,7 +18,7 @@ export async function POST(
       )
     }
 
-    const lead = getLeadById(id)
+    const lead = await getLeadById(id)
     if (!lead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 })
     }
@@ -33,35 +31,17 @@ export async function POST(
       phone: lead.phone,
     }
 
-    // Send to your chatbot webhook (configure this URL)
-    const webhookUrl = process.env.CHATBOT_WEBHOOK_URL
-    
-    if (webhookUrl) {
-      try {
-        await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(chatbotPayload),
-        })
-      } catch (webhookError) {
-        console.error("Failed to send to chatbot webhook:", webhookError)
-        // Continue anyway - we'll still update the lead status
-      }
-    }
-
     // Update lead status
     const newStatus: LeadStatus = action === "approve" ? "approved" : "declined"
-    const updatedLead = updateLead(id, { 
+    const updatedLead = await updateLead(id, { 
       status: newStatus,
-      // Also save the final message that was sent
       ...(action === "approve" ? { approveMessage: message } : { declineMessage: message })
     })
 
     return NextResponse.json({
       success: true,
       lead: updatedLead,
-      sentPayload: chatbotPayload,
-      webhookConfigured: !!webhookUrl,
+      chatbotPayload, // This is what you would send to your chatbot
     })
   } catch {
     return NextResponse.json(
