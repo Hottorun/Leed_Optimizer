@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import useSWR from "swr"
 import { Plus } from "lucide-react"
+import { toast } from "sonner"
 import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
 import { StatsCards } from "./stats-cards"
@@ -121,6 +122,12 @@ export function Dashboard() {
   const handleSendMessage = async (action: "approve" | "decline" | "unrelated", message: string) => {
     if (!selectedLead) return
 
+    const actionLabels = {
+      approve: "approved",
+      decline: "declined",
+      unrelated: "marked as unrelated",
+    }
+
     const response = await fetch(`/api/leads/${selectedLead.id}/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -131,12 +138,18 @@ export function Dashboard() {
       const result = await response.json()
       setSelectedLead(result.lead)
       mutate()
+      toast.success(`Lead ${actionLabels[action]}!`, {
+        description: "Webhook sent to n8n",
+      })
+    } else {
+      toast.error("Failed to send message")
     }
   }
 
   const handleDeleteLead = async () => {
     if (!selectedLead) return
 
+    const leadName = selectedLead.name
     const response = await fetch(`/api/leads/${selectedLead.id}`, {
       method: "DELETE",
     })
@@ -144,6 +157,9 @@ export function Dashboard() {
     if (response.ok) {
       setSelectedLead(null)
       mutate()
+      toast.success(`${leadName} deleted`)
+    } else {
+      toast.error("Failed to delete lead")
     }
   }
 
@@ -157,6 +173,9 @@ export function Dashboard() {
     if (response.ok) {
       const updated = await response.json()
       setSettings(updated)
+      toast.success("Settings saved successfully")
+    } else {
+      toast.error("Failed to save settings")
     }
   }
 
@@ -166,8 +185,12 @@ export function Dashboard() {
     })
 
     if (response.ok) {
+      const result = await response.json()
       setSelectedLead(null)
       mutate()
+      toast.success(`All ${result.deletedCount} leads deleted`)
+    } else {
+      toast.error("Failed to delete all leads")
     }
   }
 
@@ -205,7 +228,19 @@ export function Dashboard() {
     })
 
     if (response.ok) {
+      const result = await response.json()
       mutate()
+      if (result.autoApproved) {
+        toast.success(`${leadData.name} added and auto-approved!`, {
+          description: `${leadData.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"} lead with ${leadData.rating} stars`,
+        })
+      } else {
+        toast.success(`${leadData.name} added successfully!`, {
+          description: `${leadData.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"} lead - Pending review`,
+        })
+      }
+    } else {
+      toast.error("Failed to add lead")
     }
   }
 
@@ -243,6 +278,7 @@ export function Dashboard() {
         mobileMenuOpen={mobileMenuOpen}
         onMobileMenuOpen={() => setMobileMenuOpen(true)}
         onMobileMenuClose={() => setMobileMenuOpen(false)}
+        onSelectLead={handleSelectLead}
       />
 
       <div className="flex-1 lg:pl-64">

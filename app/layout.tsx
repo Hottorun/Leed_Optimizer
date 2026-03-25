@@ -8,9 +8,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'LeadFlow - WhatsApp Leads CRM',
-  description: 'Manage and track your WhatsApp leads in real-time',
-  generator: 'v0.app',
+  title: 'LeadFlow',
+  description: 'Manage and track your leads in real-time',
   icons: {
     icon: [
       {

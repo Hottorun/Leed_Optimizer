@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getLeadById, updateLead } from "@/lib/supabase"
+import { getLeadById, updateLead, getSettings } from "@/lib/supabase"
 import type { SendMessageResponse, LeadStatus } from "@/lib/types"
 
 export async function POST(
@@ -23,6 +23,10 @@ export async function POST(
       return NextResponse.json({ error: "Lead not found" }, { status: 404 })
     }
 
+    // Get webhook URL from settings (database)
+    const settings = await getSettings()
+    const webhookUrl = settings.webhookUrl
+    
     // Prepare the response to send to the chatbot
     const chatbotPayload: SendMessageResponse = {
       leadId: lead.id,
@@ -32,10 +36,8 @@ export async function POST(
     }
 
     // Send POST request to n8n webhook
-    const webhookUrl = process.env.N8N_WEBHOOK_URL
-    
     let webhookSent = false
-    if (webhookUrl && action !== "unrelated") {
+    if (webhookUrl) {
       try {
         const webhookResponse = await fetch(webhookUrl, {
           method: "POST",

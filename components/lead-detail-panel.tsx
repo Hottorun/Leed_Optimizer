@@ -306,8 +306,8 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
         {isPending && (
           <div className="mt-6 space-y-4">
             {/* Approve Message */}
-            <div>
-              <div className="flex items-center justify-between">
+            <div className="rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-primary cursor-pointer">
                   <Check className="h-4 w-4" />
                   Approval Message
@@ -316,7 +316,7 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
               <Textarea
                 value={approveMessage}
                 onChange={(e) => setApproveMessage(e.target.value)}
-                className="mt-2 min-h-[80px] bg-secondary resize-none cursor-text"
+                className="min-h-[80px] bg-secondary resize-none cursor-text border-border"
                 placeholder="Enter approval message..."
               />
               <Button
@@ -339,8 +339,8 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
             </div>
 
             {/* Decline Message */}
-            <div>
-              <div className="flex items-center justify-between">
+            <div className="rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-destructive cursor-pointer">
                   <XCircle className="h-4 w-4" />
                   Decline Message
@@ -349,7 +349,7 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
               <Textarea
                 value={declineMessage}
                 onChange={(e) => setDeclineMessage(e.target.value)}
-                className="mt-2 min-h-[80px] bg-secondary resize-none cursor-text"
+                className="min-h-[80px] bg-secondary resize-none cursor-text border-border"
                 placeholder="Enter decline message..."
               />
               <Button
@@ -373,9 +373,9 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
             </div>
 
             {/* Mark as Unrelated */}
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground cursor-pointer">
+            <div className="rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer">
                   <Filter className="h-4 w-4" />
                   Mark as Unrelated
                 </label>
@@ -383,7 +383,7 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
               <Textarea
                 value={unrelatedMessage}
                 onChange={(e) => setUnrelatedMessage(e.target.value)}
-                className="mt-2 min-h-[60px] bg-secondary resize-none cursor-text"
+                className="min-h-[60px] bg-secondary resize-none cursor-text border-border"
                 placeholder="Optional message for unrelated..."
               />
               <Button

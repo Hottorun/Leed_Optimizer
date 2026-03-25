@@ -19,11 +19,15 @@ import {
   Bell,
   Menu,
   X,
+  Sparkles,
+  MessageCircle,
+  Mail,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LeadStatus, CustomerType, RatingFilter, Lead } from "@/lib/types"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
+import { toast } from "sonner"
 
 interface User {
   id: string
@@ -47,6 +51,7 @@ interface AppSidebarProps {
   mobileMenuOpen: boolean
   onMobileMenuOpen: () => void
   onMobileMenuClose: () => void
+  onSelectLead: (lead: Lead) => void
 }
 
 const statusItems: { id: LeadStatus | null; label: string; icon: typeof LayoutDashboard; color: string }[] = [
@@ -88,10 +93,41 @@ export function AppSidebar({
   mobileMenuOpen,
   onMobileMenuOpen,
   onMobileMenuClose,
+  onSelectLead,
 }: AppSidebarProps) {
   const router = useRouter()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const prevLeadsCount = useRef(leads.length)
+
+  useEffect(() => {
+    if (leads.length > prevLeadsCount.current) {
+      const newLead = leads[0]
+      if (newLead) {
+        const platform = newLead.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
+        if (newLead.autoApproved) {
+          toast.success(`New lead auto-approved: ${newLead.name}`, {
+            description: `${platform} lead - ${newLead.rating} stars`,
+            duration: 5000,
+            onClick: () => {
+              onSelectLead(newLead)
+              setShowNotifications(false)
+            }
+          })
+        } else {
+          toast.info(`New ${platform} lead: ${newLead.name}`, {
+            description: `${newLead.rating} stars - Pending review`,
+            duration: 5000,
+            onClick: () => {
+              onSelectLead(newLead)
+              setShowNotifications(false)
+            }
+          })
+        }
+      }
+    }
+    prevLeadsCount.current = leads.length
+  }, [leads, onSelectLead])
 
   const handleLogoClick = () => {
     setIsRefreshing(true)
@@ -100,22 +136,15 @@ export function AppSidebar({
   }
 
   const getNotifications = () => {
-    const lastLoginTime = localStorage.getItem("lastLoginTime")
-    if (!lastLoginTime) return { count: 0, items: [] }
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const recentLeads = leads.filter(lead => new Date(lead.createdAt) > oneDayAgo)
     
-    const loginDate = new Date(lastLoginTime)
-    const newLeads = leads.filter(lead => new Date(lead.createdAt) > loginDate)
+    if (recentLeads.length === 0) return { count: 0, items: [] }
     
-    if (newLeads.length === 0) return { count: 0, items: [] }
-    
-    const items: { count: number; message: string }[] = []
-    const approved = newLeads.filter(l => l.autoApproved)
-    const whatsapp = newLeads.filter(l => l.contactPlatform === "whatsapp")
-    const email = newLeads.filter(l => l.contactPlatform === "email")
-    
-    if (approved.length > 0) items.push({ count: approved.length, message: "Auto-approved" })
-    if (whatsapp.length > 0) items.push({ count: whatsapp.length, message: "New WhatsApp" })
-    if (email.length > 0) items.push({ count: email.length, message: "New Email" })
+    const items = recentLeads.map(lead => ({
+      id: lead.id,
+      lead
+    }))
     
     return { count: items.length, items }
   }
@@ -272,20 +301,44 @@ export function AppSidebar({
             )}
           </button>
           {showNotifications && (
-            <div className="absolute left-0 top-full mt-2 w-64 rounded-lg border border-border bg-popover shadow-lg z-50 p-3">
-              <h4 className="font-semibold text-sm mb-2">Activity Summary</h4>
-              {notificationData.items.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No new activity</p>
-              ) : (
-                <div className="space-y-2">
-                  {notificationData.items.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <span>{item.message}</span>
-                      <span className="font-medium">{item.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="absolute left-0 top-full mt-2 w-80 max-h-96 rounded-lg border border-border bg-popover shadow-lg z-50 overflow-hidden flex flex-col">
+              <div className="p-3 border-b border-border bg-muted/50">
+                <h4 className="font-semibold text-sm">Activity (24h)</h4>
+                <p className="text-xs text-muted-foreground">{notificationData.count} new lead{notificationData.count !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="overflow-y-auto flex-1">
+                {notificationData.items.length === 0 ? (
+                  <p className="p-4 text-xs text-muted-foreground text-center">No new activity</p>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {notificationData.items.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onSelectLead(item.lead)
+                          setShowNotifications(false)
+                        }}
+                        className="w-full flex items-start gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                      >
+                        <NotificationIcon type={item.lead.contactPlatform === "whatsapp" ? "whatsapp" : item.lead.autoApproved ? "auto_approved" : "email"} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{item.lead.name}</p>
+                            <StatusBadge status={item.lead.status} />
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">{item.lead.workType}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <StarRating rating={item.lead.rating} />
+                            {item.lead.autoApproved && (
+                              <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">Auto</span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -429,5 +482,65 @@ export function AppSidebar({
         </div>
       </aside>
     </>
+  )
+}
+
+function NotificationIcon({ type }: { type: string }) {
+  switch (type) {
+    case "auto_approved":
+      return (
+        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="h-4 w-4 text-primary" />
+        </div>
+      )
+    case "whatsapp":
+      return (
+        <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+          <MessageCircle className="h-4 w-4 text-green-500" />
+        </div>
+      )
+    case "email":
+      return (
+        <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+          <Mail className="h-4 w-4 text-blue-500" />
+        </div>
+      )
+    default:
+      return (
+        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+          <Bell className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )
+  }
+}
+
+function StatusBadge({ status }: { status: LeadStatus }) {
+  const config: Record<LeadStatus, { label: string; className: string }> = {
+    pending: { label: "Pending", className: "bg-chart-3/20 text-chart-3 border-chart-3/30" },
+    approved: { label: "Approved", className: "bg-primary/20 text-primary border-primary/30" },
+    declined: { label: "Declined", className: "bg-destructive/20 text-destructive border-destructive/30" },
+    unrelated: { label: "Unrelated", className: "bg-muted/50 text-muted-foreground border-muted" },
+  }
+  const { label, className } = config[status]
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded border ${className}`}>
+      {label}
+    </span>
+  )
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={cn(
+            "h-3 w-3",
+            i < rating ? "fill-primary text-primary" : "text-muted-foreground/30"
+          )}
+        />
+      ))}
+    </div>
   )
 }
