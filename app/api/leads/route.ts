@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getLeads, addLead, getSettings, updateLead } from "@/lib/supabase"
-import type { IncomingLead, LeadStatus } from "@/lib/types"
+import { getLeads, addLead, getSettings } from "@/lib/supabase"
+import type { CollectedData } from "@/lib/types"
 
 interface User {
   id: string
@@ -44,67 +44,40 @@ export async function POST(request: Request) {
     const body = await request.json()
 
     const { 
-      name, phone, email, location, workType, conversationSummary, 
-      approveMessage, declineMessage, rating, ratingReason, 
-      contactPlatform, status, autoApproved, originalMessage 
+      name, phone, email, location, workType, message, company, budget, timeline,
+      contactPlatform
     } = body
 
-    if (!name || !phone || !email || !location || !workType || !conversationSummary || !approveMessage || !declineMessage || !rating || !ratingReason) {
+    if (!name || !phone || !email) {
       return NextResponse.json(
         { 
           error: "Missing required fields",
-          required: ["name", "phone", "email", "location", "workType", "conversationSummary", "approveMessage", "declineMessage", "rating", "ratingReason"]
+          required: ["name", "phone", "email"]
         },
         { status: 400 }
       )
     }
 
-    if (rating < 1 || rating > 5) {
-      return NextResponse.json(
-        { error: "Rating must be between 1 and 5" },
-        { status: 400 }
-      )
-    }
+    const settings = await getSettings(user.teamId)
 
-    const validStatuses: LeadStatus[] = ["pending", "approved", "declined", "unrelated"]
-    if (status && !validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: "Invalid status. Must be one of: pending, approved, declined, unrelated" },
-        { status: 400 }
-      )
-    }
-
-    let initialStatus: LeadStatus = status || "pending"
-    let wasAutoApproved = false
-
-    const settings = await getSettings()
-
-    if (settings.autoApproveEnabled && rating >= settings.autoApproveMinRating) {
-      initialStatus = "approved"
-      wasAutoApproved = true
-    }
-
-    if (settings.autoDeclineUnrelated && status === "unrelated") {
-      initialStatus = "unrelated"
+    const collectedData: CollectedData = {
+      name,
+      phone,
+      email,
+      ...(location && { location }),
+      ...(workType && { workType }),
+      ...(message && { message }),
+      ...(company && { company }),
+      ...(budget && { budget }),
+      ...(timeline && { timeline }),
+      ...(contactPlatform && { contactPlatform }),
     }
 
     const newLead = await addLead({
       name,
       phone,
       email,
-      location,
-      workType,
-      conversationSummary,
-      approveMessage,
-      declineMessage,
-      rating,
-      ratingReason,
-      contactPlatform: contactPlatform || "whatsapp",
-      status: initialStatus,
-      leadCount: 1,
-      isLoyal: false,
-      autoApproved: wasAutoApproved,
-      originalMessage: originalMessage || "",
+      collectedData,
       teamId: user.teamId,
     })
 

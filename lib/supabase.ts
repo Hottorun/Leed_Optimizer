@@ -1,6 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
-import type { Lead, AppSettings, LeadStatus, Team, TeamMember, TeamRole } from "./types"
-import { mockLeads } from "./mock-data"
+import type { Lead, AppSettings, LeadStatus, Team, TeamMember, TeamRole, LeadSession, Message, CollectedData } from "./types"
 import bcrypt from "bcryptjs"
 
 let supabase: SupabaseClient | null = null
@@ -59,23 +58,48 @@ export async function getLeads(teamId?: string): Promise<Lead[]> {
     )
   }
 
-  let query = client
+  const leadsQuery = client
     .from("leads")
     .select("*")
     .order("created_at", { ascending: false })
 
   if (teamId) {
-    query = query.eq("teams_id", teamId)
+    leadsQuery.eq("teams_id", teamId)
   }
 
-  const { data, error } = await query
+  const { data: leadsData, error: leadsError } = await leadsQuery
 
-  if (error) {
-    console.error("Error fetching leads:", error)
+  if (leadsError) {
+    console.error("Error fetching leads:", leadsError)
     return []
   }
 
-  return (data || []).map(mapDbLeadToLead)
+  if (!leadsData || leadsData.length === 0) {
+    return []
+  }
+
+  const leadIds = leadsData.map(l => l.id)
+
+  const { data: sessionsData, error: sessionsError } = await client
+    .from("leads_sessions")
+    .select("*")
+    .in("leads_id", leadIds)
+    .order("created_at", { ascending: false })
+
+  if (sessionsError) {
+    console.error("Error fetching sessions:", sessionsError)
+  }
+
+  const sessionsByLeadId = new Map<string, LeadSession>()
+  if (sessionsData) {
+    for (const session of sessionsData) {
+      if (!sessionsByLeadId.has(session.leads_id)) {
+        sessionsByLeadId.set(session.leads_id, mapDbSessionToSession(session))
+      }
+    }
+  }
+
+  return leadsData.map(lead => mapDbLeadToLead(lead, sessionsByLeadId.get(lead.id)))
 }
 
 export async function getLeadById(id: string): Promise<Lead | null> {
@@ -85,37 +109,34 @@ export async function getLeadById(id: string): Promise<Lead | null> {
     return inMemoryLeads.find((lead) => lead.id === id) || null
   }
 
-  const { data, error } = await client
+  const { data: leadData, error: leadError } = await client
     .from("leads")
     .select("*")
     .eq("id", id)
     .single()
 
-  if (error) {
-    console.error("Error fetching lead:", error)
+  if (leadError) {
+    console.error("Error fetching lead:", leadError)
     return null
   }
 
-  return mapDbLeadToLead(data)
+  const { data: sessionData } = await client
+    .from("leads_sessions")
+    .select("*")
+    .eq("leads_id", id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  const session = sessionData ? mapDbSessionToSession(sessionData) : undefined
+  return mapDbLeadToLead(leadData, session)
 }
 
 export async function addLead(lead: {
   name: string
   phone: string
   email: string
-  location: string
-  workType: string
-  conversationSummary: string
-  approveMessage: string
-  declineMessage: string
-  rating: number
-  ratingReason: string
-  contactPlatform?: "whatsapp" | "email"
-  status?: LeadStatus
-  leadCount?: number
-  isLoyal?: boolean
-  autoApproved?: boolean
-  originalMessage?: string
+  collectedData?: CollectedData
   teamId?: string
 }): Promise<Lead | null> {
   const client = getSupabase()
@@ -130,19 +151,9 @@ export async function addLead(lead: {
       name: lead.name,
       phone: lead.phone,
       email: lead.email,
-      location: lead.location,
-      workType: lead.workType,
-      conversationSummary: lead.conversationSummary,
-      approveMessage: lead.approveMessage,
-      declineMessage: lead.declineMessage,
-      rating: lead.rating,
-      ratingReason: lead.ratingReason,
-      contactPlatform: lead.contactPlatform || "whatsapp",
-      status: lead.status || "pending",
       leadCount,
       isLoyal,
-      autoApproved: lead.autoApproved || false,
-      originalMessage: lead.originalMessage || "",
+      autoApproved: false,
       teamId: lead.teamId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -151,36 +162,50 @@ export async function addLead(lead: {
     return newLead
   }
 
-  const { data, error } = await client
+  const { data: leadData, error: leadError } = await client
     .from("leads")
     .insert({
       name: lead.name,
       phone: lead.phone,
       email: lead.email,
-      location: lead.location,
-      work_type: lead.workType,
-      conversation_summary: lead.conversationSummary,
-      approve_message: lead.approveMessage,
-      decline_message: lead.declineMessage,
-      rating: lead.rating,
-      rating_reason: lead.ratingReason,
-      contact_platform: lead.contactPlatform || "whatsapp",
       lead_count: leadCount,
       is_loyal: isLoyal,
-      status: lead.status || "pending",
-      auto_approved: lead.autoApproved || false,
-      original_message: lead.originalMessage || "",
+      auto_approved: false,
       teams_id: lead.teamId,
     })
     .select()
     .single()
 
-  if (error) {
-    console.error("Error adding lead:", error)
+  if (leadError) {
+    console.error("Error adding lead:", leadError)
     return null
   }
 
-  return mapDbLeadToLead(data)
+  if (!leadData) return null
+
+  const { data: sessionData, error: sessionError } = await client
+    .from("leads_sessions")
+    .insert({
+      teams_id: lead.teamId,
+      leads_id: leadData.id,
+      status: "active",
+      current_step: "start",
+      collected_data: lead.collectedData || {
+        name: lead.name,
+        phone: lead.phone,
+        email: lead.email,
+      },
+      needs_more_info: false,
+    })
+    .select()
+    .single()
+
+  if (sessionError) {
+    console.error("Error creating session:", sessionError)
+  }
+
+  const session = sessionData ? mapDbSessionToSession(sessionData) : undefined
+  return mapDbLeadToLead(leadData, session)
 }
 
 export async function updateLead(id: string, updates: Partial<Lead>): Promise<Lead | null> {
@@ -203,20 +228,14 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<Le
   if (updates.name !== undefined) dbUpdates.name = updates.name
   if (updates.phone !== undefined) dbUpdates.phone = updates.phone
   if (updates.email !== undefined) dbUpdates.email = updates.email
-  if (updates.location !== undefined) dbUpdates.location = updates.location
-  if (updates.workType !== undefined) dbUpdates.work_type = updates.workType
-  if (updates.conversationSummary !== undefined) dbUpdates.conversation_summary = updates.conversationSummary
-  if (updates.approveMessage !== undefined) dbUpdates.approve_message = updates.approveMessage
-  if (updates.declineMessage !== undefined) dbUpdates.decline_message = updates.declineMessage
-  if (updates.rating !== undefined) dbUpdates.rating = updates.rating
-  if (updates.ratingReason !== undefined) dbUpdates.rating_reason = updates.ratingReason
-  if (updates.status !== undefined) dbUpdates.status = updates.status
-  if (updates.contactPlatform !== undefined) dbUpdates.contact_platform = updates.contactPlatform
   if (updates.leadCount !== undefined) dbUpdates.lead_count = updates.leadCount
   if (updates.isLoyal !== undefined) dbUpdates.is_loyal = updates.isLoyal
   if (updates.autoApproved !== undefined) dbUpdates.auto_approved = updates.autoApproved
-  if (updates.originalMessage !== undefined) dbUpdates.original_message = updates.originalMessage
   if (updates.lastContactedAt !== undefined) dbUpdates.last_contacted_at = updates.lastContactedAt
+
+  if (Object.keys(dbUpdates).length === 0) {
+    return getLeadById(id)
+  }
 
   const { data, error } = await client
     .from("leads")
@@ -231,6 +250,53 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<Le
   }
 
   return mapDbLeadToLead(data)
+}
+
+export async function updateLeadSession(
+  sessionId: string,
+  updates: Partial<{
+    status: string
+    currentStep: string
+    collectedData: CollectedData
+    needsMoreInfo: boolean
+    rating: boolean
+    ratingReason: string
+    forwardedAt: string
+  }>
+): Promise<LeadSession | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  const dbUpdates: Record<string, unknown> = {}
+  
+  if (updates.status !== undefined) dbUpdates.status = updates.status
+  if (updates.currentStep !== undefined) dbUpdates.current_step = updates.currentStep
+  if (updates.collectedData !== undefined) dbUpdates.collected_data = updates.collectedData
+  if (updates.needsMoreInfo !== undefined) dbUpdates.needs_more_info = updates.needsMoreInfo
+  if (updates.rating !== undefined) dbUpdates.rating = updates.rating
+  if (updates.ratingReason !== undefined) dbUpdates.rating_reason = updates.ratingReason
+  if (updates.forwardedAt !== undefined) dbUpdates.forwarded_at = updates.forwardedAt
+
+  if (Object.keys(dbUpdates).length === 0) {
+    return null
+  }
+
+  const { data, error } = await client
+    .from("leads_sessions")
+    .update(dbUpdates)
+    .eq("id", sessionId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error("Error updating lead session:", error)
+    return null
+  }
+
+  return mapDbSessionToSession(data)
 }
 
 export async function deleteLead(id: string): Promise<boolean> {
@@ -277,7 +343,7 @@ export async function deleteAllLeads(): Promise<boolean> {
   return true
 }
 
-export async function deleteDeclinedLeadsOlderThan(days: number): Promise<number> {
+export async function deleteDeclinedLeadsOlderThan(teamId: string, days: number): Promise<number> {
   const client = getSupabase()
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
@@ -285,36 +351,56 @@ export async function deleteDeclinedLeadsOlderThan(days: number): Promise<number
   if (!client) {
     const initialLength = inMemoryLeads.length
     inMemoryLeads = inMemoryLeads.filter(
-      (lead) => !(lead.status === "declined" && new Date(lead.updatedAt) < cutoffDate)
+      (lead) => {
+        if (lead.teamId !== teamId) return true
+        const session = lead.session
+        return !(session?.status === "completed" && new Date(lead.updatedAt) < cutoffDate)
+      }
     )
     return initialLength - inMemoryLeads.length
   }
 
-  const { data, error } = await client
+  const { data: sessions, error } = await client
+    .from("leads_sessions")
+    .select("leads_id")
+    .eq("teams_id", teamId)
+    .eq("status", "completed")
+    .lt("updated_at", cutoffDate.toISOString())
+
+  if (error || !sessions) {
+    console.error("Error finding declined leads:", error)
+    return 0
+  }
+
+  if (sessions.length === 0) return 0
+
+  const leadIds = sessions.map(s => s.leads_id)
+
+  const { data, error: deleteError } = await client
     .from("leads")
     .delete()
-    .eq("status", "declined")
-    .lt("updated_at", cutoffDate.toISOString())
+    .in("id", leadIds)
     .select()
 
-  if (error) {
-    console.error("Error deleting old declined leads:", error)
+  if (deleteError) {
+    console.error("Error deleting old declined leads:", deleteError)
     return 0
   }
 
   return data?.length || 0
 }
 
-export async function getSettings(): Promise<AppSettings> {
+export async function getSettings(teamId?: string): Promise<AppSettings> {
   const client = getSupabase()
   
-  if (!client) {
+  if (!client || !teamId) {
     return inMemorySettings
   }
 
   const { data, error } = await client
     .from("settings")
     .select("*")
+    .eq("team_id", teamId)
     .single()
 
   if (error || !data) {
@@ -336,7 +422,7 @@ export async function getSettings(): Promise<AppSettings> {
   }
 }
 
-export async function updateSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
+export async function updateSettings(teamId: string, settings: Partial<AppSettings>): Promise<AppSettings> {
   const client = getSupabase()
   
   if (!client) {
@@ -347,7 +433,7 @@ export async function updateSettings(settings: Partial<AppSettings>): Promise<Ap
   const { data, error } = await client
     .from("settings")
     .upsert({
-      id: 1,
+      team_id: teamId,
       auto_delete_declined_days: settings.autoDeleteDeclinedDays,
       webhook_url: settings.webhookUrl,
       auto_approve_enabled: settings.autoApproveEnabled,
@@ -383,51 +469,85 @@ export async function updateSettings(settings: Partial<AppSettings>): Promise<Ap
   }
 }
 
-function mapDbLeadToLead(row: {
-  id: string
-  name: string
-  phone: string
-  email: string
-  location: string
-  work_type: string
-  conversation_summary: string
-  approve_message: string
-  decline_message: string
-  rating: number
-  rating_reason: string
-  status: string
-  contact_platform?: string
-  lead_count?: number
-  is_loyal?: boolean
-  auto_approved?: boolean
-  original_message?: string
-  last_contacted_at?: string
-  created_at: string
-  updated_at: string
-  teams_id?: string
-}): Lead {
+function mapDbLeadToLead(
+  row: {
+    id: string
+    name: string
+    phone: string
+    email: string
+    lead_count?: number
+    is_loyal?: boolean
+    auto_approved?: boolean
+    last_contacted_at?: string
+    created_at: string
+    updated_at: string
+    teams_id?: string
+  },
+  session?: LeadSession
+): Lead {
   return {
     id: row.id,
     name: row.name,
     phone: row.phone,
     email: row.email,
-    location: row.location,
-    workType: row.work_type,
-    conversationSummary: row.conversation_summary,
-    approveMessage: row.approve_message,
-    declineMessage: row.decline_message,
-    rating: row.rating,
-    ratingReason: row.rating_reason,
-    status: row.status as Lead["status"],
-    contactPlatform: (row.contact_platform as Lead["contactPlatform"]) || "whatsapp",
     leadCount: row.lead_count || 1,
     isLoyal: row.is_loyal || false,
     autoApproved: row.auto_approved || false,
-    originalMessage: row.original_message || "",
     lastContactedAt: row.last_contacted_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     teamId: row.teams_id,
+    session,
+  }
+}
+
+function mapDbSessionToSession(row: {
+  id: string
+  created_at: string
+  teams_id: string
+  leads_id: string
+  status: string
+  current_step: string
+  collected_data: CollectedData
+  needs_more_info: boolean
+  rating?: boolean
+  rating_reason?: string
+  forwarded_at?: string
+  updated_at: string
+}): LeadSession {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    teamsId: row.teams_id,
+    leadsId: row.leads_id,
+    status: row.status as LeadSession["status"],
+    currentStep: row.current_step,
+    collectedData: row.collected_data,
+    needsMoreInfo: row.needs_more_info,
+    rating: row.rating,
+    ratingReason: row.rating_reason,
+    forwardedAt: row.forwarded_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function mapDbMessageToMessage(row: {
+  id: string
+  created_at: string
+  teams_id: string
+  leads_id: string
+  leads_sessions_id?: string
+  direction: string
+  text?: string
+}): Message {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    teamsId: row.teams_id,
+    leadsId: row.leads_id,
+    leadsSessionsId: row.leads_sessions_id,
+    direction: row.direction as Message["direction"],
+    text: row.text,
   }
 }
 
@@ -459,6 +579,11 @@ export async function getTeamById(teamId: string): Promise<Team | null> {
     inviteCode: data.invite_code,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    industry: data.industry,
+    defaultLanguage: data.default_language,
+    active: data.active,
+    phone: data.phone,
+    email: data.email,
   }
 }
 

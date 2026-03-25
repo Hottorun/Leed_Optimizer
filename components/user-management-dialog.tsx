@@ -45,6 +45,7 @@ export function UserManagementDialog({ open, onOpenChange }: UserManagementDialo
   const [isSaving, setIsSaving] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editingPassword, setEditingPassword] = useState("")
   
   const [newUser, setNewUser] = useState({
     email: "",
@@ -347,7 +348,7 @@ export function UserManagementDialog({ open, onOpenChange }: UserManagementDialo
                     type="password"
                     placeholder="Enter new password"
                     className="cursor-text"
-                    onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
+                    onChange={(e) => setEditingPassword(e.target.value)}
                   />
                 </div>
                 <div className="flex justify-end gap-2">

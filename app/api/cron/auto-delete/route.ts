@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server"
 import { deleteDeclinedLeadsOlderThan, getSettings } from "@/lib/supabase"
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const settings = await getSettings()
+    const body = await request.json()
+    const { teamId } = body as { teamId: string }
+
+    if (!teamId) {
+      return NextResponse.json({ error: "teamId is required" }, { status: 400 })
+    }
+
+    const settings = await getSettings(teamId)
     const days = settings.autoDeleteDeclinedDays
     
     if (days <= 0) {
@@ -14,7 +21,7 @@ export async function POST() {
       })
     }
     
-    const deletedCount = await deleteDeclinedLeadsOlderThan(days)
+    const deletedCount = await deleteDeclinedLeadsOlderThan(teamId, days)
     
     return NextResponse.json({
       success: true,

@@ -110,15 +110,16 @@ export function AppSidebar({
     if (leads.length > prevLeadsCount.current) {
       const newLead = leads[0]
       if (newLead) {
-        const platform = newLead.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
+        const session = newLead.session
+        const platform = session?.collectedData?.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
         if (newLead.autoApproved) {
           toast.success(`New lead auto-approved: ${newLead.name}`, {
-            description: `${platform} lead - ${newLead.rating} stars`,
+            description: `${platform} lead - Qualified`,
             duration: 5000,
           })
         } else {
           toast.info(`New ${platform} lead: ${newLead.name}`, {
-            description: `${newLead.rating} stars - Pending review`,
+            description: `Pending review`,
             duration: 5000,
           })
         }
@@ -318,15 +319,15 @@ export function AppSidebar({
                         }}
                         className="w-full flex items-start gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer text-left"
                       >
-                        <NotificationIcon type={item.lead.contactPlatform === "whatsapp" ? "whatsapp" : item.lead.autoApproved ? "auto_approved" : "email"} />
+                        <NotificationIcon type={item.lead.session?.collectedData?.contactPlatform === "whatsapp" ? "whatsapp" : item.lead.autoApproved ? "auto_approved" : "email"} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium truncate">{item.lead.name}</p>
-                            <StatusBadge status={item.lead.status} />
+                            <StatusBadge status={item.lead.session?.status || "active"} />
                           </div>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">{item.lead.workType}</p>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">{item.lead.session?.collectedData?.workType || "Not specified"}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <StarRating rating={item.lead.rating} />
+                            <StarRating rating={item.lead.session?.rating === true ? 5 : item.lead.session?.rating === false ? 1 : 0} />
                             {item.lead.autoApproved && (
                               <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">Auto</span>
                             )}
@@ -518,8 +519,11 @@ function StatusBadge({ status }: { status: LeadStatus }) {
     approved: { label: "Approved", className: "bg-primary/20 text-primary border-primary/30" },
     declined: { label: "Declined", className: "bg-destructive/20 text-destructive border-destructive/30" },
     unrelated: { label: "Unrelated", className: "bg-muted/50 text-muted-foreground border-muted" },
+    active: { label: "Active", className: "bg-blue-500/20 text-blue-600 border-blue-500/30" },
+    forwarded: { label: "Forwarded", className: "bg-purple-500/20 text-purple-600 border-purple-500/30" },
+    completed: { label: "Completed", className: "bg-green-500/20 text-green-600 border-green-500/30" },
   }
-  const { label, className } = config[status]
+  const { label, className } = config[status] || { label: "Unknown", className: "" }
   return (
     <span className={`text-xs px-1.5 py-0.5 rounded border ${className}`}>
       {label}

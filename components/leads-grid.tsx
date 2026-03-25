@@ -53,15 +53,18 @@ export function LeadsGrid({
   const searchTerms = normalizeSearchQuery(searchQuery)
   
   const filteredLeads = leads.filter((lead) => {
+    const session = lead.session
+    const collectedData = session?.collectedData || {}
+
     if (searchTerms.length > 0) {
       const searchableFields = [
         lead.name,
         lead.phone,
         lead.email,
-        lead.location,
-        lead.workType,
-        lead.conversationSummary,
-        lead.ratingReason,
+        collectedData.location || "",
+        collectedData.workType || "",
+        collectedData.message || "",
+        session?.ratingReason || "",
       ].join(' ').toLowerCase()
       
       if (!fuzzyMatch(searchableFields, searchTerms)) {
@@ -69,8 +72,8 @@ export function LeadsGrid({
       }
     }
 
-    const matchesStatus = !statusFilter || lead.status === statusFilter
-    const matchesPlatform = platformFilter === "all" || lead.contactPlatform === platformFilter
+    const matchesStatus = !statusFilter || (session?.status as LeadStatus) === statusFilter
+    const matchesPlatform = platformFilter === "all" || collectedData.contactPlatform === platformFilter
     
     const matchesCustomerType = 
       customerTypeFilter === "all" ||
@@ -78,9 +81,11 @@ export function LeadsGrid({
       (customerTypeFilter === "returning" && lead.leadCount > 1) ||
       (customerTypeFilter === "loyal" && lead.leadCount >= 3)
 
-    const matchesRating = ratingFilter === "all" || lead.rating === ratingFilter
+    const ratingMatch = ratingFilter === "all" || 
+      (ratingFilter === 5 && session?.rating === true) ||
+      (ratingFilter === 1 && session?.rating === false)
 
-    return matchesStatus && matchesPlatform && matchesCustomerType && matchesRating
+    return matchesStatus && matchesPlatform && matchesCustomerType && ratingMatch
   })
 
   function getDateGroup(dateString: string): string {
@@ -92,13 +97,16 @@ export function LeadsGrid({
   }
 
   function getGroupKey(lead: Lead): string {
+    const session = lead.session
+    const collectedData = session?.collectedData || {}
+
     switch (groupBy) {
       case "rating":
-        return `Rating: ${lead.rating} Stars`
+        return session?.rating === true ? "Qualified" : session?.rating === false ? "Not Qualified" : "Pending Review"
       case "status":
-        return lead.status.charAt(0).toUpperCase() + lead.status.slice(1)
+        return (session?.status || "active").charAt(0).toUpperCase() + (session?.status || "active").slice(1)
       case "platform":
-        return lead.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
+        return collectedData.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
       case "customerType":
         if (lead.leadCount >= 3) return "Loyal Customers"
         if (lead.leadCount > 1) return "Returning Customers"
@@ -121,8 +129,10 @@ export function LeadsGrid({
 
   const sortLeads = (leadsToSort: Lead[]): Lead[] => {
     return [...leadsToSort].sort((a, b) => {
-      if (a.status === "pending" && b.status !== "pending") return -1
-      if (a.status !== "pending" && b.status === "pending") return 1
+      const aStatus = a.session?.status || "active"
+      const bStatus = b.session?.status || "active"
+      if (aStatus === "active" && bStatus !== "active") return -1
+      if (aStatus !== "active" && bStatus === "active") return 1
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
   }

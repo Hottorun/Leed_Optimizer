@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   X,
   Phone,
@@ -53,37 +53,42 @@ const statusConfig: Record<LeadStatus, { label: string; className: string }> = {
   approved: { label: "Approved", className: "bg-primary/20 text-primary border-primary/30" },
   declined: { label: "Declined", className: "bg-destructive/20 text-destructive border-destructive/30" },
   unrelated: { label: "Unrelated", className: "bg-muted/50 text-muted-foreground border-muted" },
+  active: { label: "Active", className: "bg-blue-500/20 text-blue-600 border-blue-500/30" },
+  forwarded: { label: "Forwarded", className: "bg-purple-500/20 text-purple-600 border-purple-500/30" },
+  completed: { label: "Completed", className: "bg-green-500/20 text-green-600 border-green-500/30" },
 }
 
 function formatDate(dateString: string): string {
   return format(new Date(dateString), "EEEE, MMMM d, yyyy 'at' h:mm a")
 }
 
-function getRatingColor(rating: number): string {
-  if (rating >= 4) return "text-primary"
-  if (rating >= 3) return "text-chart-3"
-  return "text-destructive"
+function getRatingColor(rating: boolean | undefined): string {
+  if (rating === true) return "text-primary"
+  if (rating === false) return "text-destructive"
+  return "text-chart-3"
 }
 
-function getRatingBgColor(rating: number): string {
-  if (rating >= 4) return "bg-primary/10 border-primary/20"
-  if (rating >= 3) return "bg-chart-3/10 border-chart-3/20"
-  return "bg-destructive/10 border-destructive/20"
+function getRatingBgColor(rating: boolean | undefined): string {
+  if (rating === true) return "bg-primary/10 border-primary/20"
+  if (rating === false) return "bg-destructive/10 border-destructive/20"
+  return "bg-chart-3/10 border-chart-3/20"
 }
 
 export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDelete }: LeadDetailPanelProps) {
-  const [approveMessage, setApproveMessage] = useState(lead.approveMessage)
-  const [declineMessage, setDeclineMessage] = useState(lead.declineMessage)
+  const session = lead.session
+  const collectedData = session?.collectedData || {}
+
+  const [approveMessage, setApproveMessage] = useState(
+    `Thank you for your interest! We'd love to work with you.`
+  )
+  const [declineMessage, setDeclineMessage] = useState(
+    `Thank you for reaching out. Unfortunately, we're not able to help at this time.`
+  )
   const [unrelatedMessage, setUnrelatedMessage] = useState(
     "This message doesn't seem to be related to our services. Thank you for reaching out!"
   )
   const [isSending, setIsSending] = useState<"approve" | "decline" | "unrelated" | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-
-  useEffect(() => {
-    setApproveMessage(lead.approveMessage)
-    setDeclineMessage(lead.declineMessage)
-  }, [lead.approveMessage, lead.declineMessage])
 
   const handleSend = async (action: "approve" | "decline" | "unrelated") => {
     setIsSending(action)
@@ -111,8 +116,13 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
     }
   }
 
-  const isPending = lead.status === "pending"
-  const status = statusConfig[lead.status as LeadStatus] || { label: "Unknown", className: "" }
+  const sessionStatus = session?.status || "active"
+  const isPending = sessionStatus === "active"
+  const status = statusConfig[sessionStatus as LeadStatus] || { label: "Unknown", className: "" }
+  const workType = collectedData.workType || "Not specified"
+  const location = collectedData.location || "Not specified"
+  const contactPlatform = collectedData.contactPlatform || "email"
+  const message = collectedData.message || "No message provided"
 
   return (
     <div 
@@ -174,10 +184,9 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
         <div className="flex items-center gap-4">
           <div className={cn(
             "flex h-16 w-16 items-center justify-center rounded-full text-xl font-semibold",
-            lead.status === "approved" && "bg-primary/20 text-primary",
-            lead.status === "pending" && "bg-chart-3/20 text-chart-3",
-            lead.status === "declined" && "bg-destructive/20 text-destructive",
-            lead.status === "unrelated" && "bg-muted text-muted-foreground"
+            sessionStatus === "completed" && "bg-primary/20 text-primary",
+            sessionStatus === "active" && "bg-chart-3/20 text-chart-3",
+            sessionStatus === "forwarded" && "bg-purple-500/20 text-purple-600"
           )}>
             {lead.name
               .split(" ")
@@ -190,7 +199,7 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
             <h3 className="text-xl font-semibold text-foreground">{lead.name}</h3>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Briefcase className="h-4 w-4" />
-              <span>{lead.workType}</span>
+              <span>{workType}</span>
             </div>
           </div>
         </div>
@@ -213,14 +222,14 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
         <div className="mt-4 flex flex-wrap gap-2">
           <Badge variant="outline" className={cn(
             "flex items-center gap-1.5",
-            lead.contactPlatform === "whatsapp" ? "bg-green-500/10 text-green-600 border-green-500/30" : "bg-blue-500/10 text-blue-600 border-blue-500/30"
+            contactPlatform === "whatsapp" ? "bg-green-500/10 text-green-600 border-green-500/30" : "bg-blue-500/10 text-blue-600 border-blue-500/30"
           )}>
-            {lead.contactPlatform === "whatsapp" ? (
+            {contactPlatform === "whatsapp" ? (
               <MessageCircle className="h-3 w-3" />
             ) : (
               <AtSign className="h-3 w-3" />
             )}
-            {lead.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"}
+            {contactPlatform === "whatsapp" ? "WhatsApp" : "Email"}
           </Badge>
           {lead.leadCount >= 3 && (
             <Badge variant="outline" className="flex items-center gap-1.5 bg-red-500/10 text-red-600 border-red-500/30">
@@ -242,28 +251,22 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
         </div>
 
         {/* AI Rating Section */}
-        <div className={cn("mt-6 rounded-lg border p-4", getRatingBgColor(lead.rating))}>
+        <div className={cn("mt-6 rounded-lg border p-4", getRatingBgColor(session?.rating))}>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">AI Rating</span>
+            <span className="text-sm font-medium text-foreground">AI Qualification</span>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={cn(
-                      "h-4 w-4",
-                      i < lead.rating ? getRatingColor(lead.rating) : "text-muted-foreground/30"
-                    )}
-                    fill={i < lead.rating ? "currentColor" : "none"}
-                  />
-                ))}
-              </div>
-              <span className={cn("text-sm font-semibold", getRatingColor(lead.rating))}>
-                {lead.rating}/5
+              <Star
+                className={cn("h-4 w-4", getRatingColor(session?.rating))}
+                fill={session?.rating ? "currentColor" : "none"}
+              />
+              <span className={cn("text-sm font-semibold", getRatingColor(session?.rating))}>
+                {session?.rating === true ? "Qualified" : session?.rating === false ? "Not Qualified" : "Pending"}
               </span>
             </div>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">{lead.ratingReason}</p>
+          {session?.ratingReason && (
+            <p className="mt-2 text-sm text-muted-foreground">{session.ratingReason}</p>
+          )}
         </div>
 
         {/* Contact Details */}
@@ -286,7 +289,7 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
             <MapPin className="h-5 w-5 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Location</p>
-              <p className="font-medium text-foreground">{lead.location}</p>
+              <p className="font-medium text-foreground">{location}</p>
             </div>
           </div>
         </div>
@@ -295,14 +298,14 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
         <div className="mt-6">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <MessageSquare className="h-4 w-4" />
-            Conversation Summary
+            Message
           </div>
           <div className="mt-2 rounded-lg bg-secondary p-4 text-sm text-foreground leading-relaxed">
-            {lead.conversationSummary}
+            {message}
           </div>
         </div>
 
-        {/* Action Buttons - Only show for pending leads */}
+        {/* Action Buttons - Only show for active/pending leads */}
         {isPending && (
           <div className="mt-6 space-y-4">
             {/* Approve Message */}
@@ -408,14 +411,12 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
           </div>
         )}
 
-        {/* Show status badges for non-pending leads */}
-        {!isPending && (
+        {/* Show status badges for completed leads */}
+        {sessionStatus === "completed" && (
           <div className="mt-6 rounded-lg bg-secondary p-4">
             <p className="text-sm text-muted-foreground">
-              This lead has been <span className="font-medium text-foreground">{lead.status}</span>.
-              {lead.status === "approved" && " An approval message was sent."}
-              {lead.status === "declined" && " A decline message was sent."}
-              {lead.status === "unrelated" && " This message was marked as unrelated."}
+              This lead has been <span className="font-medium text-foreground">forwarded</span>.
+              The conversation has been completed.
             </p>
           </div>
         )}

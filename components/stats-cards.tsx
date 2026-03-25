@@ -14,12 +14,12 @@ interface StatsCardsProps {
 
 export function StatsCards({ leads, onStatsClick, activeStatus, onPlatformClick, activePlatform }: StatsCardsProps) {
   const total = leads.length
-  const pending = leads.filter((l) => l.status === "pending").length
-  const approved = leads.filter((l) => l.status === "approved").length
-  const declined = leads.filter((l) => l.status === "declined").length
-  const unrelated = leads.filter((l) => l.status === "unrelated").length
-  const whatsappLeads = leads.filter((l) => l.contactPlatform === "whatsapp").length
-  const emailLeads = leads.filter((l) => l.contactPlatform === "email").length
+  const pending = leads.filter((l) => l.session?.status === "active").length
+  const approved = leads.filter((l) => l.session?.rating === true).length
+  const declined = leads.filter((l) => l.session?.rating === false).length
+  const unrelated = leads.filter((l) => l.session?.rating === false).length
+  const whatsappLeads = leads.filter((l) => l.session?.collectedData?.contactPlatform === "whatsapp").length
+  const emailLeads = leads.filter((l) => l.session?.collectedData?.contactPlatform === "email").length
 
   const stats: {
     label: string

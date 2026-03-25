@@ -42,15 +42,17 @@ export function NotificationBell({ leads, lastLoginTime }: NotificationBellProps
       const newLead = newLeads[0]
       
       if (newLead) {
-        const platform = newLead.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
+        const session = newLead.session
+        const platform = session?.collectedData?.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
+        const isQualified = session?.rating === true
         if (newLead.autoApproved) {
           toast.success(`New lead auto-approved: ${newLead.name}`, {
-            description: `${platform} lead - ${newLead.rating} stars`,
+            description: `${platform} lead - Qualified`,
             duration: 5000,
           })
         } else {
           toast.info(`New ${platform} lead: ${newLead.name}`, {
-            description: `${newLead.rating} stars - Pending review`,
+            description: isQualified ? "Qualified - Pending review" : "Pending review",
             duration: 5000,
           })
         }
@@ -207,39 +209,28 @@ function getNotifications(leads: Lead[], lastLoginTime: string | null): Notifica
       type: "auto_approved",
       count: approved.length,
       message: "Auto-approved",
-      timestamp: new Date().toISOString()
     })
   }
 
-  const whatsapp = newLeads.filter(l => l.contactPlatform === "whatsapp")
+  const whatsapp = newLeads.filter(l => l.session?.collectedData?.contactPlatform === "whatsapp")
   if (whatsapp.length > 0) {
     notifications.push({
       id: "whatsapp",
       type: "whatsapp",
       count: whatsapp.length,
       message: "New WhatsApp",
-      timestamp: new Date().toISOString()
     })
   }
 
-  const email = newLeads.filter(l => l.contactPlatform === "email")
+  const email = newLeads.filter(l => l.session?.collectedData?.contactPlatform === "email")
   if (email.length > 0) {
     notifications.push({
       id: "email",
       type: "email",
       count: email.length,
       message: "New Email",
-      timestamp: new Date().toISOString()
     })
   }
 
   return notifications
-}
-
-function usePrevious<T>(value: T): T | undefined {
-  const ref = useRef<T>()
-  useEffect(() => {
-    ref.current = value
-  })
-  return ref.current
 }

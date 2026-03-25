@@ -70,13 +70,11 @@ const translations = {
     menuAbout: "Über uns",
     signIn: "Anmelden",
     signUp: "Registrieren",
-    getStarted: "Loslegen",
   },
   en: {
     badge: "AI-Powered Lead Qualification",
     title: "Every Lead. One Place. Instantly Qualified.",
     subtitle: "Stop spending hours evaluating leads that don't fit your business. Aclea centralizes all your inquiries from WhatsApp, Gmail, and other channels - and uses AI to instantly determine if each lead is worth your time.",
-    getStarted: "Get Started",
     features: "Features",
     powerfulFeatures: "Powerful Features",
     discoverFeatures: "Discover the features that help you spend more time on the leads that really matter.",

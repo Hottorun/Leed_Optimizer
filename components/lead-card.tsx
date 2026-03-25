@@ -17,6 +17,9 @@ const statusConfig: Record<LeadStatus, { label: string; className: string }> = {
   approved: { label: "Approved", className: "bg-primary/20 text-primary border-primary/30" },
   declined: { label: "Declined", className: "bg-destructive/20 text-destructive border-destructive/30" },
   unrelated: { label: "Unrelated", className: "bg-muted/50 text-muted-foreground border-muted" },
+  active: { label: "Active", className: "bg-blue-500/20 text-blue-600 border-blue-500/30" },
+  forwarded: { label: "Forwarded", className: "bg-purple-500/20 text-purple-600 border-purple-500/30" },
+  completed: { label: "Completed", className: "bg-green-500/20 text-green-600 border-green-500/30" },
 }
 
 function formatDate(dateString: string): string {
@@ -39,14 +42,19 @@ function formatRelativeDate(dateString: string): string {
   return format(date, "MMM d")
 }
 
-function getRatingColor(rating: number): string {
-  if (rating >= 4) return "text-primary"
-  if (rating >= 3) return "text-chart-3"
-  return "text-destructive"
+function getRatingColor(rating: boolean | undefined): string {
+  if (rating === true) return "text-primary"
+  if (rating === false) return "text-destructive"
+  return "text-muted-foreground"
 }
 
 export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
-  const status = statusConfig[lead.status as LeadStatus] || { label: "Unknown", className: "" }
+  const session = lead.session
+  const status = session ? statusConfig[session.status as LeadStatus] || { label: "Unknown", className: "" } : { label: "Unknown", className: "" }
+  const collectedData = session?.collectedData || {}
+  const workType = collectedData.workType || "Not specified"
+  const location = collectedData.location || "Not specified"
+  const contactPlatform = collectedData.contactPlatform || "email"
 
   return (
     <button
@@ -60,10 +68,9 @@ export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
         <div className="flex items-center gap-3 min-w-0">
           <div className={cn(
             "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors",
-            lead.status === "approved" && "bg-primary/20 text-primary",
-            lead.status === "pending" && "bg-chart-3/20 text-chart-3",
-            lead.status === "declined" && "bg-destructive/20 text-destructive",
-            lead.status === "unrelated" && "bg-muted text-muted-foreground"
+            session?.status === "completed" && "bg-primary/20 text-primary",
+            session?.status === "active" && "bg-chart-3/20 text-chart-3",
+            session?.status === "forwarded" && "bg-purple-500/20 text-purple-600"
           )}>
             {lead.name
               .split(" ")
@@ -76,7 +83,7 @@ export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
             <h3 className="truncate font-semibold text-card-foreground">{lead.name}</h3>
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Briefcase className="h-3.5 w-3.5" />
-              <span className="truncate">{lead.workType}</span>
+              <span className="truncate">{workType}</span>
             </div>
           </div>
         </div>
@@ -100,14 +107,14 @@ export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
       <div className="mt-3 flex flex-wrap gap-1.5">
         <Badge variant="secondary" className={cn(
           "flex items-center gap-1 text-xs",
-          lead.contactPlatform === "whatsapp" ? "bg-green-500/10 text-green-600" : "bg-blue-500/10 text-blue-600"
+          contactPlatform === "whatsapp" ? "bg-green-500/10 text-green-600" : "bg-blue-500/10 text-blue-600"
         )}>
-          {lead.contactPlatform === "whatsapp" ? (
+          {contactPlatform === "whatsapp" ? (
             <MessageCircle className="h-3 w-3" />
           ) : (
             <AtSign className="h-3 w-3" />
           )}
-          {lead.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"}
+          {contactPlatform === "whatsapp" ? "WhatsApp" : "Email"}
         </Badge>
         {lead.leadCount >= 3 && (
           <Badge variant="secondary" className="flex items-center gap-1 text-xs bg-red-500/10 text-red-600">
@@ -136,22 +143,24 @@ export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
               key={i}
               className={cn(
                 "h-3.5 w-3.5",
-                i < lead.rating ? getRatingColor(lead.rating) : "text-muted-foreground/30"
+                i === 0 && session?.rating !== undefined ? getRatingColor(session.rating) : "text-muted-foreground/30"
               )}
-              fill={i < lead.rating ? "currentColor" : "none"}
+              fill={i === 0 && session?.rating !== undefined ? (session.rating ? "currentColor" : "none") : "none"}
             />
           ))}
         </div>
-        <span className={cn("text-xs font-medium", getRatingColor(lead.rating))}>
-          {lead.rating}/5
+        <span className={cn("text-xs font-medium", getRatingColor(session?.rating))}>
+          {session?.rating === true ? "Qualified" : session?.rating === false ? "Not Qualified" : "Pending"}
         </span>
-        <span className="text-xs text-muted-foreground truncate">
-          - {lead.ratingReason}
-        </span>
+        {session?.ratingReason && (
+          <span className="text-xs text-muted-foreground truncate">
+            - {session.ratingReason}
+          </span>
+        )}
       </div>
 
       <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
-        {lead.conversationSummary}
+        {collectedData.message || collectedData.company || "No message yet"}
       </p>
 
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -168,7 +177,7 @@ export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5" />
-          {lead.location}
+          {location}
         </div>
       </div>
     </button>

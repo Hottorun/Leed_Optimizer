@@ -1,10 +1,12 @@
-export type LeadStatus = "pending" | "approved" | "declined" | "unrelated"
+export type LeadStatus = "active" | "pending" | "approved" | "declined" | "unrelated" | "forwarded" | "completed"
 export type ContactPlatform = "whatsapp" | "email"
 export type ViewMode = "grid" | "list" | "squares"
 export type CustomerType = "all" | "first-time" | "returning" | "loyal"
 export type RatingFilter = "all" | 1 | 2 | 3 | 4 | 5
 export type GroupByOption = "none" | "rating" | "status" | "platform" | "customerType" | "date"
 export type TeamRole = "owner" | "admin" | "member"
+export type SessionStatus = "active" | "completed" | "forwarded"
+export type FlowType = "qualification" | "support" | "contact"
 
 export interface Team {
   id: string
@@ -13,6 +15,11 @@ export interface Team {
   inviteCode?: string
   createdAt: string
   updatedAt: string
+  industry?: string
+  defaultLanguage?: string
+  active?: boolean
+  phone?: string
+  email?: string
 }
 
 export interface TeamMember {
@@ -24,57 +31,100 @@ export interface TeamMember {
   createdAt: string
 }
 
+export interface CollectedData {
+  name?: string
+  phone?: string
+  email?: string
+  location?: string
+  workType?: string
+  company?: string
+  budget?: string
+  timeline?: string
+  message?: string
+  [key: string]: string | undefined
+}
+
+export interface LeadSession {
+  id: string
+  createdAt: string
+  teamsId: string
+  leadsId: string
+  status: SessionStatus
+  currentStep: string
+  collectedData: CollectedData
+  needsMoreInfo: boolean
+  rating?: boolean
+  ratingReason?: string
+  forwardedAt?: string
+  updatedAt: string
+}
+
 export interface Lead {
   id: string
   name: string
   phone: string
   email: string
-  location: string
-  workType: string
-  conversationSummary: string
-  approveMessage: string
-  declineMessage: string
-  rating: number // 1-5 star rating from AI
-  ratingReason: string // AI explanation for the rating
-  status: LeadStatus
-  contactPlatform: ContactPlatform // whatsapp or email
-  leadCount: number // Number of leads from this customer (1 = first-time, 2+ = returning)
-  isLoyal: boolean // True if leadCount >= 3
+  leadCount: number
+  isLoyal: boolean
+  autoApproved: boolean
+  lastContactedAt?: string
   createdAt: string
   updatedAt: string
-  lastContactedAt?: string // For follow-up tracking
-  autoApproved?: boolean // If true, was auto-approved based on rules
-  originalMessage?: string // The original incoming message
-  teamId?: string // Team this lead belongs to
+  teamId?: string
+  session?: LeadSession
+}
+
+export interface Message {
+  id: string
+  createdAt: string
+  teamsId: string
+  leadsId: string
+  leadsSessionsId?: string
+  direction: "incoming" | "outgoing"
+  text?: string
+}
+
+export interface TeamConfig {
+  id: string
+  createdAt: string
+  teamsId: string
+  flowType: FlowType
+  welcomeMessage?: string
+  aiSystemPrompt?: string
+  requiredFields: string[]
+  qualificationRules: QualificationRule[]
+  redirectLead: "email" | "phone" | "none"
+  toneOfVoice?: string
+  qualificationQuestions: QualificationQuestion[]
+}
+
+export interface QualificationRule {
+  field: string
+  operator: "equals" | "contains" | "greater_than" | "less_than"
+  value: string
+  action: "approve" | "decline" | "needs_review"
+}
+
+export interface QualificationQuestion {
+  id: string
+  field: string
+  question: string
+  required: boolean
+  options?: string[]
 }
 
 export interface AppSettings {
-  autoDeleteDeclinedDays: number // 0 = disabled
+  autoDeleteDeclinedDays: number
   webhookUrl: string
   autoApproveEnabled: boolean
-  autoApproveMinRating: number // Minimum rating to auto-approve (1-5)
-  autoDeclineUnrelated: boolean // Auto-mark unrelated messages
-  followUpDays: number // Days to wait before follow-up on pending leads
-  followUpMessage: string // Custom follow-up message template
+  autoApproveMinRating: number
+  autoDeclineUnrelated: boolean
+  followUpDays: number
+  followUpMessage: string
   defaultApproveMessage: string
   defaultDeclineMessage: string
   defaultUnrelatedMessage: string
-  language: "de" | "en" // User interface language
-}
-
-export interface AutoApproveRule {
-  id: string
-  name: string
-  conditions: {
-    minRating?: number
-    maxRating?: number
-    workTypes?: string[]
-    locations?: string[]
-    platforms?: ContactPlatform[]
-  }
-  action: "approve" | "decline" | "mark_unrelated"
-  customMessage?: string
-  enabled: boolean
+  language: "de" | "en"
 }
 
 export interface LeadStats {
@@ -84,25 +134,18 @@ export interface LeadStats {
   declined: number
 }
 
-// Expected JSON structure from your backend
 export interface IncomingLead {
   name: string
   phone: string
   email: string
   location: string
   workType: string
-  conversationSummary: string
-  approveMessage: string
-  declineMessage: string
-  rating: number // 1-5
-  ratingReason: string // e.g., "Not in our area", "Perfect fit", etc.
-  contactPlatform?: ContactPlatform // whatsapp or email, defaults to whatsapp
+  message: string
 }
 
-// Response sent back to chatbot when user sends a message
 export interface SendMessageResponse {
   leadId: string
-  action: "approve" | "decline"
+  action: "approve" | "decline" | "unrelated"
   message: string
   phone: string
 }

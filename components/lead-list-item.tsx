@@ -17,6 +17,9 @@ const statusConfig: Record<LeadStatus, { label: string; className: string }> = {
   approved: { label: "Approved", className: "bg-primary/20 text-primary border-primary/30" },
   declined: { label: "Declined", className: "bg-destructive/20 text-destructive border-destructive/30" },
   unrelated: { label: "Unrelated", className: "bg-muted/50 text-muted-foreground border-muted" },
+  active: { label: "Active", className: "bg-blue-500/20 text-blue-600 border-blue-500/30" },
+  forwarded: { label: "Forwarded", className: "bg-purple-500/20 text-purple-600 border-purple-500/30" },
+  completed: { label: "Completed", className: "bg-green-500/20 text-green-600 border-green-500/30" },
 }
 
 function formatDate(dateString: string): string {
@@ -38,14 +41,21 @@ function formatRelativeDate(dateString: string): string {
   return format(date, "MMM d")
 }
 
-function getRatingColor(rating: number): string {
-  if (rating >= 4) return "text-primary"
-  if (rating >= 3) return "text-chart-3"
-  return "text-destructive"
+function getRatingColor(rating: boolean | undefined): string {
+  if (rating === true) return "text-primary"
+  if (rating === false) return "text-destructive"
+  return "text-chart-3"
 }
 
 export function LeadListItem({ lead, onClick, isSelected }: LeadListItemProps) {
-  const status = statusConfig[lead.status as LeadStatus] || { label: "Unknown", className: "" }
+  const session = lead.session
+  const sessionStatus = session?.status || "active"
+  const status = statusConfig[sessionStatus as LeadStatus] || { label: "Unknown", className: "" }
+  const collectedData = session?.collectedData || {}
+  const workType = collectedData.workType || "Not specified"
+  const location = collectedData.location || "Not specified"
+  const contactPlatform = collectedData.contactPlatform || "email"
+  const rating = session?.rating
 
   return (
     <button
@@ -59,10 +69,9 @@ export function LeadListItem({ lead, onClick, isSelected }: LeadListItemProps) {
         {/* Avatar */}
         <div className={cn(
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-          lead.status === "approved" && "bg-primary/20 text-primary",
-          lead.status === "pending" && "bg-chart-3/20 text-chart-3",
-          lead.status === "declined" && "bg-destructive/20 text-destructive",
-          lead.status === "unrelated" && "bg-muted text-muted-foreground"
+          sessionStatus === "completed" && "bg-primary/20 text-primary",
+          sessionStatus === "active" && "bg-chart-3/20 text-chart-3",
+          sessionStatus === "forwarded" && "bg-purple-500/20 text-purple-600"
         )}>
           {lead.name
             .split(" ")
@@ -80,30 +89,24 @@ export function LeadListItem({ lead, onClick, isSelected }: LeadListItemProps) {
               {status.label}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground truncate">{lead.workType}</p>
+          <p className="text-sm text-muted-foreground truncate">{workType}</p>
         </div>
 
         {/* Rating */}
         <div className="hidden sm:flex items-center justify-center w-24 shrink-0">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star
-              key={i}
-              className={cn(
-                "h-3.5 w-3.5",
-                i < lead.rating ? getRatingColor(lead.rating) : "text-muted-foreground/30"
-              )}
-              fill={i < lead.rating ? "currentColor" : "none"}
-            />
-          ))}
+          <Star
+            className={cn("h-3.5 w-3.5", getRatingColor(rating))}
+            fill={rating ? "currentColor" : "none"}
+          />
         </div>
 
         {/* Badges */}
         <div className="hidden md:flex items-center gap-1.5">
           <Badge variant="secondary" className={cn(
             "text-xs",
-            lead.contactPlatform === "whatsapp" ? "bg-green-500/10 text-green-600" : "bg-blue-500/10 text-blue-600"
+            contactPlatform === "whatsapp" ? "bg-green-500/10 text-green-600" : "bg-blue-500/10 text-blue-600"
           )}>
-            {lead.contactPlatform === "whatsapp" ? (
+            {contactPlatform === "whatsapp" ? (
               <MessageCircle className="h-3 w-3" />
             ) : (
               <AtSign className="h-3 w-3" />
@@ -124,7 +127,7 @@ export function LeadListItem({ lead, onClick, isSelected }: LeadListItemProps) {
         {/* Location */}
         <div className="hidden lg:flex items-center gap-1.5 text-xs text-muted-foreground min-w-[120px]">
           <MapPin className="h-3.5 w-3.5" />
-          <span className="truncate">{lead.location}</span>
+          <span className="truncate">{location}</span>
         </div>
 
         {/* Phone */}
