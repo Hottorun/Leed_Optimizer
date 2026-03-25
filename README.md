@@ -40,3 +40,8 @@ Set the `CHATBOT_WEBHOOK_URL` environment variable to configure where responses 
 to run:
 - pnpm install
 - pnpm dev
+
+create .env file
+into it put:
+`NEXT_PUBLIC_SUPABASE_URL`
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`
