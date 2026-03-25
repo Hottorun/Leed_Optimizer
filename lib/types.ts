@@ -4,6 +4,25 @@ export type ViewMode = "grid" | "list" | "squares"
 export type CustomerType = "all" | "first-time" | "returning" | "loyal"
 export type RatingFilter = "all" | 1 | 2 | 3 | 4 | 5
 export type GroupByOption = "none" | "rating" | "status" | "platform" | "customerType" | "date"
+export type TeamRole = "owner" | "admin" | "member"
+
+export interface Team {
+  id: string
+  name: string
+  ownerId?: string
+  inviteCode?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TeamMember {
+  id: string
+  email: string
+  name: string
+  role: TeamRole
+  teamId: string
+  createdAt: string
+}
 
 export interface Lead {
   id: string
@@ -26,6 +45,7 @@ export interface Lead {
   lastContactedAt?: string // For follow-up tracking
   autoApproved?: boolean // If true, was auto-approved based on rules
   originalMessage?: string // The original incoming message
+  teamId?: string // Team this lead belongs to
 }
 
 export interface AppSettings {
@@ -39,6 +59,7 @@ export interface AppSettings {
   defaultApproveMessage: string
   defaultDeclineMessage: string
   defaultUnrelatedMessage: string
+  language: "de" | "en" // User interface language
 }
 
 export interface AutoApproveRule {

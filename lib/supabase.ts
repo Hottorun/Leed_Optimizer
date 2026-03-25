@@ -1,8 +1,13 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
-import type { Lead, AppSettings, LeadStatus } from "./types"
+import type { Lead, AppSettings, LeadStatus, Team, TeamMember, TeamRole } from "./types"
 import { mockLeads } from "./mock-data"
+import bcrypt from "bcryptjs"
 
 let supabase: SupabaseClient | null = null
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12)
+}
 
 function getSupabase(): SupabaseClient | null {
   if (supabase) return supabase
@@ -25,7 +30,7 @@ function getSupabase(): SupabaseClient | null {
   return supabase
 }
 
-let inMemoryLeads = [...mockLeads]
+let inMemoryLeads: Lead[] = []
 
 let inMemorySettings: AppSettings = {
   autoDeleteDeclinedDays: 0,
@@ -38,21 +43,32 @@ let inMemorySettings: AppSettings = {
   defaultApproveMessage: "Thank you for your interest! We'd love to work with you.",
   defaultDeclineMessage: "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
   defaultUnrelatedMessage: "This message doesn't seem to be related to our services.",
+  language: "de",
 }
 
-export async function getLeads(): Promise<Lead[]> {
+export async function getLeads(teamId?: string): Promise<Lead[]> {
   const client = getSupabase()
   
   if (!client) {
-    return inMemoryLeads.sort((a, b) => 
+    let leads = inMemoryLeads
+    if (teamId) {
+      leads = leads.filter(lead => lead.teamId === teamId)
+    }
+    return leads.sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
   }
 
-  const { data, error } = await client
+  let query = client
     .from("leads")
     .select("*")
     .order("created_at", { ascending: false })
+
+  if (teamId) {
+    query = query.eq("teams_id", teamId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching leads:", error)
@@ -100,10 +116,11 @@ export async function addLead(lead: {
   isLoyal?: boolean
   autoApproved?: boolean
   originalMessage?: string
+  teamId?: string
 }): Promise<Lead | null> {
   const client = getSupabase()
   
-  const existingLeads = await getLeads()
+  const existingLeads = await getLeads(lead.teamId)
   const leadCount = existingLeads.filter(l => l.phone === lead.phone).length + 1
   const isLoyal = leadCount >= 3
 
@@ -126,6 +143,7 @@ export async function addLead(lead: {
       isLoyal,
       autoApproved: lead.autoApproved || false,
       originalMessage: lead.originalMessage || "",
+      teamId: lead.teamId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -152,6 +170,7 @@ export async function addLead(lead: {
       status: lead.status || "pending",
       auto_approved: lead.autoApproved || false,
       original_message: lead.originalMessage || "",
+      teams_id: lead.teamId,
     })
     .select()
     .single()
@@ -313,6 +332,7 @@ export async function getSettings(): Promise<AppSettings> {
     defaultApproveMessage: data.default_approve_message || "Thank you for your interest! We'd love to work with you.",
     defaultDeclineMessage: data.default_decline_message || "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
     defaultUnrelatedMessage: data.default_unrelated_message || "This message doesn't seem to be related to our services.",
+    language: (data.language as "de" | "en") || "de",
   }
 }
 
@@ -338,6 +358,7 @@ export async function updateSettings(settings: Partial<AppSettings>): Promise<Ap
       default_approve_message: settings.defaultApproveMessage,
       default_decline_message: settings.defaultDeclineMessage,
       default_unrelated_message: settings.defaultUnrelatedMessage,
+      language: settings.language,
     })
     .select()
     .single()
@@ -358,6 +379,7 @@ export async function updateSettings(settings: Partial<AppSettings>): Promise<Ap
     defaultApproveMessage: data.default_approve_message || "Thank you for your interest! We'd love to work with you.",
     defaultDeclineMessage: data.default_decline_message || "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
     defaultUnrelatedMessage: data.default_unrelated_message || "This message doesn't seem to be related to our services.",
+    language: (data.language as "de" | "en") || "de",
   }
 }
 
@@ -382,6 +404,7 @@ function mapDbLeadToLead(row: {
   last_contacted_at?: string
   created_at: string
   updated_at: string
+  teams_id?: string
 }): Lead {
   return {
     id: row.id,
@@ -404,5 +427,350 @@ function mapDbLeadToLead(row: {
     lastContactedAt: row.last_contacted_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    teamId: row.teams_id,
   }
+}
+
+// =====================================================
+// TEAM FUNCTIONS
+// =====================================================
+
+export async function getTeamById(teamId: string): Promise<Team | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  const { data, error } = await client
+    .from("teams")
+    .select("*")
+    .eq("id", teamId)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    ownerId: data.owner_id,
+    inviteCode: data.invite_code,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  }
+}
+
+export async function getTeamByUserId(userId: string): Promise<Team | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  // First get the user's team_id
+  const { data: userData, error: userError } = await client
+    .from("users")
+    .select("team_id")
+    .eq("id", userId)
+    .single()
+
+  if (userError || !userData?.team_id) {
+    return null
+  }
+
+  return getTeamById(userData.team_id)
+}
+
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const segments = 4
+  const segmentLength = 4
+  const codeParts: string[] = []
+  
+  for (let i = 0; i < segments; i++) {
+    let segment = ''
+    for (let j = 0; j < segmentLength; j++) {
+      segment += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    codeParts.push(segment)
+  }
+  
+  return codeParts.join('-')
+}
+
+export async function createTeam(name: string, ownerId: string): Promise<Team | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  const inviteCode = generateInviteCode()
+
+  // Create the team
+  const { data: teamData, error: teamError } = await client
+    .from("teams")
+    .insert({ name, owner_id: ownerId, invite_code: inviteCode })
+    .select()
+    .single()
+
+  if (teamError || !teamData) {
+    console.error("Error creating team:", teamError)
+    return null
+  }
+
+  // Update the owner to be part of this team
+  await client
+    .from("users")
+    .update({ team_id: teamData.id, team_role: "owner" })
+    .eq("id", ownerId)
+
+  // Create default settings for this team
+  await client
+    .from("settings")
+    .insert({
+      team_id: teamData.id,
+      webhook_url: "",
+      auto_delete_declined_days: 0,
+      auto_approve_enabled: false,
+      auto_approve_min_rating: 4,
+      auto_decline_unrelated: false,
+      follow_up_days: 3,
+      follow_up_message: "Hi {name}, just checking in on your inquiry. Are you still interested?",
+      default_approve_message: "Thank you for your interest! We'd love to work with you.",
+      default_decline_message: "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
+      default_unrelated_message: "This message doesn't seem to be related to our services.",
+    })
+
+  return {
+    id: teamData.id,
+    name: teamData.name,
+    ownerId: teamData.owner_id,
+    inviteCode: teamData.invite_code,
+    createdAt: teamData.created_at,
+    updatedAt: teamData.updated_at,
+  }
+}
+
+export async function getTeamMembers(teamId: string): Promise<TeamMember[]> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return []
+  }
+
+  const { data, error } = await client
+    .from("users")
+    .select("id, email, name, team_role, team_id, created_at")
+    .eq("team_id", teamId)
+
+  if (error || !data) {
+    return []
+  }
+
+  return data.map((user) => ({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.team_role as TeamRole,
+    teamId: user.team_id,
+    createdAt: user.created_at,
+  }))
+}
+
+export async function updateTeamInviteCode(teamId: string): Promise<string | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  const newCode = generateInviteCode()
+
+  const { data, error } = await client
+    .from("teams")
+    .update({ invite_code: newCode })
+    .eq("id", teamId)
+    .select("invite_code")
+    .single()
+
+  if (error || !data) {
+    console.error("Error updating team invite code:", error)
+    return null
+  }
+
+  return data.invite_code
+}
+
+export async function addTeamMember(
+  teamId: string,
+  email: string,
+  name: string,
+  password: string,
+  role: TeamRole = "member"
+): Promise<TeamMember | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  const hashedPassword = await hashPassword(password)
+
+  const { data: userData, error: userError } = await client
+    .from("users")
+    .insert({
+      email,
+      name,
+      password: hashedPassword,
+      role: "user",
+      team_id: teamId,
+      team_role: role,
+    })
+    .select()
+    .single()
+
+  if (userError || !userData) {
+    console.error("Error adding team member:", userError)
+    return null
+  }
+
+  return {
+    id: userData.id,
+    email: userData.email,
+    name: userData.name,
+    role: userData.team_role as TeamRole,
+    teamId: userData.team_id,
+    createdAt: userData.created_at,
+  }
+}
+
+export async function updateTeamMemberRole(
+  memberId: string,
+  newRole: TeamRole
+): Promise<boolean> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return false
+  }
+
+  const { error } = await client
+    .from("users")
+    .update({ team_role: newRole })
+    .eq("id", memberId)
+
+  if (error) {
+    console.error("Error updating team member role:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function removeTeamMember(memberId: string): Promise<boolean> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return false
+  }
+
+  // Remove the user's team association
+  const { error } = await client
+    .from("users")
+    .update({ team_id: null, team_role: null })
+    .eq("id", memberId)
+
+  if (error) {
+    console.error("Error removing team member:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function transferTeamOwnership(
+  teamId: string,
+  newOwnerId: string
+): Promise<boolean> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return false
+  }
+
+  // Update the new owner to be owner
+  const { error: newOwnerError } = await client
+    .from("users")
+    .update({ team_role: "owner" })
+    .eq("id", newOwnerId)
+
+  if (newOwnerError) {
+    console.error("Error transferring ownership:", newOwnerError)
+    return false
+  }
+
+  // Update old owner to be admin
+  const { data: currentOwner } = await client
+    .from("teams")
+    .select("owner_id")
+    .eq("id", teamId)
+    .single()
+
+  if (currentOwner?.owner_id && currentOwner.owner_id !== newOwnerId) {
+    await client
+      .from("users")
+      .update({ team_role: "admin" })
+      .eq("id", currentOwner.owner_id)
+  }
+
+  // Update team owner_id
+  await client
+    .from("teams")
+    .update({ owner_id: newOwnerId })
+    .eq("id", teamId)
+
+  return true
+}
+
+export async function updateTeam(teamId: string, name: string): Promise<boolean> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return false
+  }
+
+  const { error } = await client
+    .from("teams")
+    .update({ name })
+    .eq("id", teamId)
+
+  if (error) {
+    console.error("Error updating team:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function getUserTeamRole(userId: string): Promise<TeamRole | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  const { data, error } = await client
+    .from("users")
+    .select("team_role")
+    .eq("id", userId)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  return data.team_role as TeamRole
 }

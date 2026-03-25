@@ -26,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, Loader2, Link, Clock, AlertTriangle, Zap, Sparkles, Sun, Moon } from "lucide-react"
+import { Trash2, Loader2, Link, Clock, AlertTriangle, Zap, Sparkles, Sun, Moon, Globe } from "lucide-react"
 import type { AppSettings } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
@@ -38,6 +38,7 @@ interface SettingsDialogProps {
   onUpdateSettings: (settings: Partial<AppSettings>) => Promise<void>
   onDeleteAllLeads: () => Promise<void>
   onDeleteOldDeclined: () => Promise<number>
+  teamRole?: "owner" | "admin" | "member"
 }
 
 export function SettingsDialog({
@@ -47,7 +48,9 @@ export function SettingsDialog({
   onUpdateSettings,
   onDeleteAllLeads,
   onDeleteOldDeclined,
+  teamRole,
 }: SettingsDialogProps) {
+  const isAdminOrOwner = teamRole === "admin" || teamRole === "owner"
   const [webhookUrl, setWebhookUrl] = useState(settings.webhookUrl)
   const [autoDeleteDays, setAutoDeleteDays] = useState(settings.autoDeleteDeclinedDays.toString())
   const [autoApproveEnabled, setAutoApproveEnabled] = useState(settings.autoApproveEnabled)
@@ -55,6 +58,7 @@ export function SettingsDialog({
   const [autoDeclineUnrelated, setAutoDeclineUnrelated] = useState(settings.autoDeclineUnrelated)
   const [followUpDays, setFollowUpDays] = useState(settings.followUpDays.toString())
   const [followUpMessage, setFollowUpMessage] = useState(settings.followUpMessage)
+  const [language, setLanguage] = useState<"de" | "en">(settings.language || "de")
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeletingOld, setIsDeletingOld] = useState(false)
@@ -70,6 +74,7 @@ export function SettingsDialog({
       setAutoDeclineUnrelated(settings.autoDeclineUnrelated)
       setFollowUpDays(settings.followUpDays.toString())
       setFollowUpMessage(settings.followUpMessage)
+      setLanguage(settings.language || "de")
     }
   }, [open, settings])
 
@@ -84,6 +89,7 @@ export function SettingsDialog({
         autoDeclineUnrelated,
         followUpDays: parseInt(followUpDays) || 3,
         followUpMessage,
+        language,
       })
     } finally {
       setIsSaving(false)
@@ -121,37 +127,43 @@ export function SettingsDialog({
         </DialogHeader>
 
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className={`grid w-full ${isAdminOrOwner ? "grid-cols-3" : "grid-cols-1"}`}>
             <TabsTrigger value="general" className="cursor-pointer">General</TabsTrigger>
-            <TabsTrigger value="automation" className="cursor-pointer">
-              <Zap className="h-4 w-4 mr-1" />
-              Automation
-            </TabsTrigger>
-            <TabsTrigger value="danger" className="cursor-pointer">Danger</TabsTrigger>
+            {isAdminOrOwner && (
+              <TabsTrigger value="automation" className="cursor-pointer">
+                <Zap className="h-4 w-4 mr-1" />
+                Automation
+              </TabsTrigger>
+            )}
+            {isAdminOrOwner && (
+              <TabsTrigger value="danger" className="cursor-pointer">Danger</TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="general" className="space-y-6 py-4">
             {/* Webhook Configuration */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Link className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-sm font-medium">Webhook Configuration</Label>
+            {isAdminOrOwner && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Link className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Webhook Configuration</Label>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="webhook-url" className="text-xs text-muted-foreground">
+                    n8n Webhook URL
+                  </Label>
+                  <Input
+                    id="webhook-url"
+                    placeholder="https://your-n8n-instance.com/webhook/..."
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Messages will be sent to this webhook when you approve or decline leads
+                  </p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="webhook-url" className="text-xs text-muted-foreground">
-                  n8n Webhook URL
-                </Label>
-                <Input
-                  id="webhook-url"
-                  placeholder="https://your-n8n-instance.com/webhook/..."
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Messages will be sent to this webhook when you approve or decline leads
-                </p>
-              </div>
-            </div>
+            )}
 
             <Separator />
 
@@ -174,6 +186,43 @@ export function SettingsDialog({
               <p className="text-xs text-muted-foreground">
                 Toggle between dark and light mode
               </p>
+            </div>
+
+            {/* Language Settings */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-sm font-medium">Language</Label>
+              </div>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setLanguage("de")}
+                    className={cn(
+                      "flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors cursor-pointer",
+                      language === "de"
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-background border-border hover:border-emerald-600/50"
+                    )}
+                  >
+                    Deutsch
+                  </button>
+                  <button
+                    onClick={() => setLanguage("en")}
+                    className={cn(
+                      "flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors cursor-pointer",
+                      language === "en"
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-background border-border hover:border-emerald-600/50"
+                    )}
+                  >
+                    English
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Select your preferred language for the interface
+                </p>
+              </div>
             </div>
 
             <Separator />

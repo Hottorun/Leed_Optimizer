@@ -45,7 +45,7 @@ function getRatingColor(rating: number): string {
 }
 
 export function LeadListItem({ lead, onClick, isSelected }: LeadListItemProps) {
-  const status = statusConfig[lead.status]
+  const status = statusConfig[lead.status as LeadStatus] || { label: "Unknown", className: "" }
 
   return (
     <button

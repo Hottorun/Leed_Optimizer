@@ -112,7 +112,7 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
   }
 
   const isPending = lead.status === "pending"
-  const status = statusConfig[lead.status]
+  const status = statusConfig[lead.status as LeadStatus] || { label: "Unknown", className: "" }
 
   return (
     <div 

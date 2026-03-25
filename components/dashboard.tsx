@@ -12,9 +12,11 @@ import { LeadDetailPanel } from "./lead-detail-panel"
 import { SettingsDialog } from "./settings-dialog"
 import { AddLeadDialog } from "./add-lead-dialog"
 import { UserManagementDialog } from "./user-management-dialog"
+import { TeamDialog, TeamManagement } from "./team-dialog"
 import { Toaster } from "@/components/ui/sonner"
 import { Button } from "@/components/ui/button"
-import type { Lead, LeadStatus, ContactPlatform, ViewMode, AppSettings, GroupByOption, CustomerType } from "@/lib/types"
+import { LanguageProvider } from "./language-provider"
+import type { Lead, LeadStatus, ContactPlatform, ViewMode, AppSettings, GroupByOption, CustomerType, Team, RatingFilter } from "@/lib/types"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -23,6 +25,8 @@ interface User {
   email: string
   name: string
   role: "admin" | "user"
+  teamId?: string
+  teamRole?: "owner" | "admin" | "member"
 }
 
 export function Dashboard() {
@@ -39,6 +43,9 @@ export function Dashboard() {
   const [userManagementOpen, setUserManagementOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
+  const [team, setTeam] = useState<Team | null>(null)
+  const [showTeamDialog, setShowTeamDialog] = useState(false)
+  const [showTeamManagement, setShowTeamManagement] = useState(false)
   const [settings, setSettings] = useState<AppSettings>({
     autoDeleteDeclinedDays: 0,
     webhookUrl: "",
@@ -50,6 +57,7 @@ export function Dashboard() {
     defaultApproveMessage: "Thank you for your interest! We'd love to work with you.",
     defaultDeclineMessage: "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
     defaultUnrelatedMessage: "This message doesn't seem to be related to our services.",
+    language: "de",
   })
 
   const { data: leads = [], mutate, isValidating } = useSWR<Lead[]>(
@@ -68,11 +76,31 @@ export function Dashboard() {
     
     fetch("/api/auth")
       .then((res) => res.json())
-      .then((data) => {
+      .then(async (data) => {
         setUser(data.user)
+        
+        // Check if user has a team
+        if (data.user?.teamId) {
+          const teamRes = await fetch("/api/teams")
+          const teamData = await teamRes.json()
+          setTeam(teamData.team)
+        } else if (data.user) {
+          // User is logged in but has no team
+          setShowTeamDialog(true)
+        }
       })
       .catch(console.error)
   }, [])
+
+  const handleTeamCreated = async () => {
+    const teamRes = await fetch("/api/teams")
+    const teamData = await teamRes.json()
+    setTeam(teamData.team)
+    // Refresh user to get updated teamId
+    const authRes = await fetch("/api/auth")
+    const authData = await authRes.json()
+    setUser(authData.user)
+  }
 
   useEffect(() => {
     if (settings.autoDeleteDeclinedDays > 0) {
@@ -262,24 +290,26 @@ export function Dashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar
-        activeFilter={statusFilter}
-        onFilterChange={handleFilterChange}
-        ratingFilter={ratingFilter}
-        onRatingFilterChange={setRatingFilter}
-        customerTypeFilter={customerTypeFilter}
-        onCustomerTypeFilterChange={setCustomerTypeFilter}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenUserManagement={() => setUserManagementOpen(true)}
-        user={user}
-        leads={leads}
-        onRefresh={handleRefresh}
-        mobileMenuOpen={mobileMenuOpen}
-        onMobileMenuOpen={() => setMobileMenuOpen(true)}
-        onMobileMenuClose={() => setMobileMenuOpen(false)}
-        onSelectLead={handleSelectLead}
-      />
+    <LanguageProvider initialLanguage={settings.language}>
+      <div className="min-h-screen bg-background">
+        <AppSidebar
+          activeFilter={statusFilter}
+          onFilterChange={handleFilterChange}
+          customerTypeFilter={customerTypeFilter}
+          onCustomerTypeFilterChange={setCustomerTypeFilter}
+          ratingFilter={ratingFilter}
+          onRatingFilterChange={setRatingFilter}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenUserManagement={() => setUserManagementOpen(true)}
+          onOpenTeamManagement={() => setShowTeamManagement(true)}
+          user={user}
+          leads={leads}
+          onRefresh={handleRefresh}
+          mobileMenuOpen={mobileMenuOpen}
+          onMobileMenuOpen={() => setMobileMenuOpen(true)}
+          onMobileMenuClose={() => setMobileMenuOpen(false)}
+          onSelectLead={handleSelectLead}
+        />
 
       <div className="flex-1 lg:pl-64">
         <AppHeader
@@ -351,6 +381,7 @@ export function Dashboard() {
         onUpdateSettings={handleUpdateSettings}
         onDeleteAllLeads={handleDeleteAllLeads}
         onDeleteOldDeclined={handleDeleteOldDeclined}
+        teamRole={user?.teamRole}
       />
 
       <AddLeadDialog
@@ -364,6 +395,19 @@ export function Dashboard() {
         onOpenChange={setUserManagementOpen}
       />
 
+      <TeamDialog
+        open={showTeamDialog}
+        onOpenChange={setShowTeamDialog}
+        onTeamCreated={handleTeamCreated}
+      />
+
+      <TeamManagement
+        open={showTeamManagement}
+        onOpenChange={setShowTeamManagement}
+        team={team}
+        onTeamUpdate={handleTeamCreated}
+      />
+
       <Toaster position="top-right" />
 
       <Button
@@ -375,5 +419,6 @@ export function Dashboard() {
         Add Lead
       </Button>
     </div>
+    </LanguageProvider>
   )
 }

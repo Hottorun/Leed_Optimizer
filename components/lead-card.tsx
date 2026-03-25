@@ -46,7 +46,7 @@ function getRatingColor(rating: number): string {
 }
 
 export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
-  const status = statusConfig[lead.status]
+  const status = statusConfig[lead.status as LeadStatus] || { label: "Unknown", className: "" }
 
   return (
     <button

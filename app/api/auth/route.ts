@@ -8,6 +8,8 @@ interface User {
   email: string
   name: string
   role: "admin" | "user"
+  teamId?: string
+  teamRole?: "owner" | "admin" | "member"
 }
 
 interface DbUser extends User {
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, name, role, password")
+      .select("id, email, name, role, password, team_id, team_role")
       .ilike("email", email)
       .limit(1)
     
@@ -77,7 +79,14 @@ export async function POST(request: Request) {
       )
     }
     
-    const user: User = { id: userData.id, email: userData.email, name: userData.name, role: userData.role }
+    const user: User = { 
+      id: userData.id, 
+      email: userData.email, 
+      name: userData.name, 
+      role: userData.role,
+      teamId: userData.team_id,
+      teamRole: userData.team_role,
+    }
 
     const cookieStore = await cookies()
     cookieStore.set("auth_token", JSON.stringify(user), {
@@ -113,7 +122,23 @@ export async function GET() {
   }
 
   try {
-    const user = JSON.parse(token.value)
+    const user = JSON.parse(token.value) as User
+    
+    // Refresh team info from database
+    const supabase = getSupabase()
+    if (supabase && user.id) {
+      const { data } = await supabase
+        .from("users")
+        .select("team_id, team_role")
+        .eq("id", user.id)
+        .single()
+      
+      if (data) {
+        user.teamId = data.team_id
+        user.teamRole = data.team_role
+      }
+    }
+    
     return NextResponse.json({ user })
   } catch {
     return NextResponse.json({ user: null })

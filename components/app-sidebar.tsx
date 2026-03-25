@@ -28,12 +28,15 @@ import type { LeadStatus, CustomerType, RatingFilter, Lead } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { toast } from "sonner"
+import { useLanguage } from "./language-provider"
 
 interface User {
   id: string
   email: string
   name: string
   role: "admin" | "user"
+  teamId?: string
+  teamRole?: "owner" | "admin" | "member"
 }
 
 interface AppSidebarProps {
@@ -45,6 +48,7 @@ interface AppSidebarProps {
   onRatingFilterChange: (rating: RatingFilter) => void
   onOpenSettings: () => void
   onOpenUserManagement: () => void
+  onOpenTeamManagement: () => void
   user?: User | null
   leads: Lead[]
   onRefresh: () => void
@@ -54,32 +58,8 @@ interface AppSidebarProps {
   onSelectLead: (lead: Lead) => void
 }
 
-const statusItems: { id: LeadStatus | null; label: string; icon: typeof LayoutDashboard; color: string }[] = [
-  { id: null, label: "All Leads", icon: LayoutDashboard, color: "" },
-  { id: "pending", label: "Pending Review", icon: Clock, color: "text-chart-3" },
-  { id: "approved", label: "Approved", icon: CheckCircle, color: "text-primary" },
-  { id: "declined", label: "Declined", icon: XCircle, color: "text-destructive" },
-  { id: "unrelated", label: "Unrelated", icon: Filter, color: "text-muted-foreground" },
-]
-
-const customerTypeItems: { id: CustomerType; label: string; icon: typeof Users }[] = [
-  { id: "all", label: "All Customers", icon: Users },
-  { id: "first-time", label: "First-time", icon: UserPlus },
-  { id: "returning", label: "Returning", icon: UserCheck },
-  { id: "loyal", label: "Loyal (3+)", icon: Heart },
-]
-
-const ratingItems: { id: RatingFilter; label: string }[] = [
-  { id: "all", label: "All Ratings" },
-  { id: 5, label: "5 Stars" },
-  { id: 4, label: "4 Stars" },
-  { id: 3, label: "3 Stars" },
-  { id: 2, label: "2 Stars" },
-  { id: 1, label: "1 Star" },
-]
-
-export function AppSidebar({ 
-  activeFilter, 
+export function AppSidebar({
+  activeFilter,
   onFilterChange,
   customerTypeFilter,
   onCustomerTypeFilterChange,
@@ -87,6 +67,7 @@ export function AppSidebar({
   onRatingFilterChange,
   onOpenSettings,
   onOpenUserManagement,
+  onOpenTeamManagement,
   user,
   leads,
   onRefresh,
@@ -95,10 +76,35 @@ export function AppSidebar({
   onMobileMenuClose,
   onSelectLead,
 }: AppSidebarProps) {
+  const { t, language } = useLanguage()
   const router = useRouter()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const prevLeadsCount = useRef(leads.length)
+
+  const statusItems = [
+    { id: null, label: language === 'de' ? 'Alle Leads' : 'All Leads', icon: LayoutDashboard, color: "" },
+    { id: "pending" as LeadStatus, label: language === 'de' ? 'Zur Prüfung' : 'Pending Review', icon: Clock, color: "text-chart-3" },
+    { id: "approved" as LeadStatus, label: language === 'de' ? 'Genehmigt' : 'Approved', icon: CheckCircle, color: "text-primary" },
+    { id: "declined" as LeadStatus, label: language === 'de' ? 'Abgelehnt' : 'Declined', icon: XCircle, color: "text-destructive" },
+    { id: "unrelated" as LeadStatus, label: language === 'de' ? 'Nicht relevant' : 'Unrelated', icon: Filter, color: "text-muted-foreground" },
+  ]
+
+  const customerTypeItems = [
+    { id: "all" as CustomerType, label: language === 'de' ? 'Alle Kunden' : 'All Customers', icon: Users },
+    { id: "first-time" as CustomerType, label: language === 'de' ? 'Neukunde' : 'First-time', icon: UserPlus },
+    { id: "returning" as CustomerType, label: language === 'de' ? 'Bestandskunde' : 'Returning', icon: UserCheck },
+    { id: "loyal" as CustomerType, label: language === 'de' ? 'Stammkunde (3+)' : 'Loyal (3+)', icon: Heart },
+  ]
+
+  const ratingItems = [
+    { id: "all" as RatingFilter, label: language === 'de' ? 'Alle Bewertungen' : 'All Ratings' },
+    { id: 5 as RatingFilter, label: "5 ★" },
+    { id: 4 as RatingFilter, label: "4 ★" },
+    { id: 3 as RatingFilter, label: "3 ★" },
+    { id: 2 as RatingFilter, label: "2 ★" },
+    { id: 1 as RatingFilter, label: "1 ★" },
+  ]
 
   useEffect(() => {
     if (leads.length > prevLeadsCount.current) {
@@ -109,25 +115,17 @@ export function AppSidebar({
           toast.success(`New lead auto-approved: ${newLead.name}`, {
             description: `${platform} lead - ${newLead.rating} stars`,
             duration: 5000,
-            onClick: () => {
-              onSelectLead(newLead)
-              setShowNotifications(false)
-            }
           })
         } else {
           toast.info(`New ${platform} lead: ${newLead.name}`, {
             description: `${newLead.rating} stars - Pending review`,
             duration: 5000,
-            onClick: () => {
-              onSelectLead(newLead)
-              setShowNotifications(false)
-            }
           })
         }
       }
     }
     prevLeadsCount.current = leads.length
-  }, [leads, onSelectLead])
+  }, [leads])
 
   const handleLogoClick = () => {
     setIsRefreshing(true)
@@ -183,7 +181,7 @@ export function AppSidebar({
               <MessageSquare className="h-5 w-5 text-primary-foreground" />
             )}
           </button>
-          <span className="text-lg font-semibold text-sidebar-foreground">LeadFlow</span>
+          <span className="text-lg font-semibold text-sidebar-foreground">aclea</span>
           <button 
             onClick={onMobileMenuClose}
             className="p-2 rounded-lg hover:bg-sidebar-accent/50 cursor-pointer"
@@ -282,7 +280,7 @@ export function AppSidebar({
             onClick={handleLogoClick}
             className="text-lg font-semibold text-sidebar-foreground cursor-pointer hover:underline underline-offset-4 transition-all active:scale-95"
           >
-            LeadFlow
+            aclea
           </button>
           <div className="flex-1" />
           <div className="relative">
@@ -447,13 +445,13 @@ export function AppSidebar({
             <Settings className="h-5 w-5" />
             Settings
           </button>
-          {user?.role === "admin" && (
+          {(user?.teamRole === "owner" || user?.teamRole === "admin") && (
             <button 
-              onClick={onOpenUserManagement}
+              onClick={onOpenTeamManagement}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
             >
               <Users className="h-5 w-5" />
-              User Management
+              Team
             </button>
           )}
         </nav>
