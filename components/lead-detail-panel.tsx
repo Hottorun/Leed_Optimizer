@@ -14,92 +14,56 @@ import {
   Check,
   Loader2,
   Star,
-  Trash2,
-  MessageCircle,
-  AtSign,
-  Users,
-  Heart,
-  Filter,
   Clock,
+  Sparkles,
+  Zap,
+  TrendingUp,
+  AlertCircle,
+  Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import type { Lead, LeadStatus } from "@/lib/types"
+import type { Lead, LeadStatus, LeadSource } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { format, formatDistanceToNow } from "date-fns"
 
 interface LeadDetailPanelProps {
   lead: Lead
   onClose: () => void
   onUpdate: (updates: Partial<Lead>) => void
-  onSendMessage: (action: "approve" | "decline" | "unrelated", message: string) => Promise<void>
-  onDelete: () => Promise<void>
+  onSendMessage: (action: "approve" | "decline", message: string) => Promise<void>
 }
 
-const statusConfig: Record<LeadStatus, { label: string; className: string }> = {
-  pending: { label: "Pending Review", className: "bg-chart-3/20 text-chart-3 border-chart-3/30" },
-  approved: { label: "Approved", className: "bg-primary/20 text-primary border-primary/30" },
-  declined: { label: "Declined", className: "bg-destructive/20 text-destructive border-destructive/30" },
-  unrelated: { label: "Unrelated", className: "bg-muted/50 text-muted-foreground border-muted" },
-  active: { label: "Active", className: "bg-blue-500/20 text-blue-600 border-blue-500/30" },
-  forwarded: { label: "Forwarded", className: "bg-purple-500/20 text-purple-600 border-purple-500/30" },
-  completed: { label: "Completed", className: "bg-green-500/20 text-green-600 border-green-500/30" },
+const statusConfig: Record<LeadStatus, { label: string; dotColor: string; textColor: string }> = {
+  pending: { label: "Pending", dotColor: "bg-amber-500", textColor: "text-amber-600" },
+  approved: { label: "Approved", dotColor: "bg-blue-500", textColor: "text-blue-600" },
+  declined: { label: "Declined", dotColor: "bg-slate-400", textColor: "text-slate-500" },
+  manual: { label: "Manual Review", dotColor: "bg-purple-500", textColor: "text-purple-600" },
+}
+
+const sourceConfig: Record<LeadSource, { label: string; color: string; iconColor: string }> = {
+  whatsapp: { label: "WhatsApp", color: "bg-emerald-50 text-emerald-700", iconColor: "text-emerald-500" },
+  email: { label: "Email", color: "bg-blue-50 text-blue-700", iconColor: "text-blue-500" },
 }
 
 function formatDate(dateString: string): string {
-  return format(new Date(dateString), "EEEE, MMMM d, yyyy 'at' h:mm a")
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
 
-function getRatingColor(rating: boolean | undefined): string {
-  if (rating === true) return "text-primary"
-  if (rating === false) return "text-destructive"
-  return "text-chart-3"
-}
+export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPanelProps) {
+  const [approveMessage, setApproveMessage] = useState(lead.approveMessage)
+  const [declineMessage, setDeclineMessage] = useState(lead.declineMessage)
+  const [isSending, setIsSending] = useState<"approve" | "decline" | null>(null)
 
-function getRatingBgColor(rating: boolean | undefined): string {
-  if (rating === true) return "bg-primary/10 border-primary/20"
-  if (rating === false) return "bg-destructive/10 border-destructive/20"
-  return "bg-chart-3/10 border-chart-3/20"
-}
-
-export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDelete }: LeadDetailPanelProps) {
-  const session = lead.session
-  const collectedData = session?.collectedData || {}
-
-  const [approveMessage, setApproveMessage] = useState(
-    `Thank you for your interest! We'd love to work with you.`
-  )
-  const [declineMessage, setDeclineMessage] = useState(
-    `Thank you for reaching out. Unfortunately, we're not able to help at this time.`
-  )
-  const [unrelatedMessage, setUnrelatedMessage] = useState(
-    "This message doesn't seem to be related to our services. Thank you for reaching out!"
-  )
-  const [isSending, setIsSending] = useState<"approve" | "decline" | "unrelated" | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  const handleSend = async (action: "approve" | "decline" | "unrelated") => {
+  const handleSend = async (action: "approve" | "decline") => {
     setIsSending(action)
-    let message = ""
-    if (action === "approve") {
-      message = approveMessage
-    } else if (action === "decline") {
-      message = declineMessage
-    } else {
-      message = unrelatedMessage
-    }
+    const message = action === "approve" ? approveMessage : declineMessage
     try {
       await onSendMessage(action, message)
     } finally {
@@ -107,87 +71,33 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
     }
   }
 
-  const handleDelete = async () => {
-    setIsDeleting(true)
-    try {
-      await onDelete()
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
-  const sessionStatus = session?.status || "active"
-  const isPending = sessionStatus === "active"
-  const status = statusConfig[sessionStatus as LeadStatus] || { label: "Unknown", className: "" }
-  const workType = collectedData.workType || "Not specified"
-  const location = collectedData.location || "Not specified"
-  const contactPlatform = collectedData.contactPlatform || "email"
-  const message = collectedData.message || "No message provided"
+  const isActionable = lead.status === "pending" || lead.status === "manual"
+  const status = statusConfig[lead.status]
+  const source = sourceConfig[lead.source]
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 cursor-pointer" 
-      onClick={onClose}
-    >
-      <div 
-        className="w-full max-w-2xl max-h-[90vh] rounded-xl border bg-background shadow-2xl overflow-hidden flex flex-col cursor-default"
-        onClick={(e) => e.stopPropagation()}
-      >
-      <div className="flex items-center justify-between border-b border-border p-4">
+    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-xl">
+      <div className="flex items-center justify-between border-b border-slate-200 p-4 bg-gradient-to-r from-white to-blue-50/30">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-foreground">Lead Details</h2>
-          <Badge variant="outline" className={cn("text-xs", status.className)}>
-            {status.label}
-          </Badge>
+          <h2 className="text-lg font-semibold text-slate-800">Lead Details</h2>
+          <div className="flex items-center gap-1.5">
+            <span className={cn("h-2 w-2 rounded-full", status.dotColor)} />
+            <span className={cn("text-xs font-medium", status.textColor)}>{status.label}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer">
-                <Trash2 className="h-5 w-5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the lead
-                  for {lead.name}.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
-                >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button variant="ghost" size="icon" onClick={onClose} className="cursor-pointer">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onClose}
+          className="text-slate-500 hover:text-slate-700 hover:bg-blue-50"
+        >
+          <X className="h-5 w-5" />
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
-        {/* Contact Info */}
         <div className="flex items-center gap-4">
-          <div className={cn(
-            "flex h-16 w-16 items-center justify-center rounded-full text-xl font-semibold",
-            sessionStatus === "completed" && "bg-primary/20 text-primary",
-            sessionStatus === "active" && "bg-chart-3/20 text-chart-3",
-            sessionStatus === "forwarded" && "bg-purple-500/20 text-purple-600"
-          )}>
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-xl font-semibold text-blue-700 shadow-sm">
             {lead.name
               .split(" ")
               .map((n) => n[0])
@@ -195,248 +105,242 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
               .slice(0, 2)
               .toUpperCase()}
           </div>
-          <div>
-            <h3 className="text-xl font-semibold text-foreground">{lead.name}</h3>
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Briefcase className="h-4 w-4" />
-              <span>{workType}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Prominent Received Date */}
-        <div className="mt-4 flex items-center gap-3 rounded-lg bg-primary/5 border border-primary/20 p-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <Clock className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Received</p>
-            <p className="text-lg font-semibold text-foreground">
-              {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true })}
-            </p>
-            <p className="text-sm text-muted-foreground">{formatDate(lead.createdAt)}</p>
-          </div>
-        </div>
-
-        {/* Customer Type & Platform */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Badge variant="outline" className={cn(
-            "flex items-center gap-1.5",
-            contactPlatform === "whatsapp" ? "bg-green-500/10 text-green-600 border-green-500/30" : "bg-blue-500/10 text-blue-600 border-blue-500/30"
-          )}>
-            {contactPlatform === "whatsapp" ? (
-              <MessageCircle className="h-3 w-3" />
-            ) : (
-              <AtSign className="h-3 w-3" />
-            )}
-            {contactPlatform === "whatsapp" ? "WhatsApp" : "Email"}
-          </Badge>
-          {lead.leadCount >= 3 && (
-            <Badge variant="outline" className="flex items-center gap-1.5 bg-red-500/10 text-red-600 border-red-500/30">
-              <Heart className="h-3 w-3 fill-red-500" />
-              Loyal ({lead.leadCount} leads)
-            </Badge>
-          )}
-          {lead.leadCount > 1 && lead.leadCount < 3 && (
-            <Badge variant="outline" className="flex items-center gap-1.5 bg-primary/10 text-primary border-primary/30">
-              <Users className="h-3 w-3" />
-              Returning ({lead.leadCount} leads)
-            </Badge>
-          )}
-          {lead.autoApproved && (
-            <Badge variant="outline" className="flex items-center gap-1.5 bg-purple-500/10 text-purple-600 border-purple-500/30">
-              Auto-Approved
-            </Badge>
-          )}
-        </div>
-
-        {/* AI Rating Section */}
-        <div className={cn("mt-6 rounded-lg border p-4", getRatingBgColor(session?.rating))}>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">AI Qualification</span>
+          <div className="flex-1">
             <div className="flex items-center gap-2">
-              <Star
-                className={cn("h-4 w-4", getRatingColor(session?.rating))}
-                fill={session?.rating ? "currentColor" : "none"}
-              />
-              <span className={cn("text-sm font-semibold", getRatingColor(session?.rating))}>
-                {session?.rating === true ? "Qualified" : session?.rating === false ? "Not Qualified" : "Pending"}
+              <h3 className="text-xl font-semibold text-slate-800">{lead.name}</h3>
+              <span className={cn("text-xs px-2 py-0.5 rounded-full", source.color)}>
+                {source.label}
               </span>
             </div>
+            <div className="flex items-center gap-1.5 text-slate-500 mt-1">
+              <Briefcase className="h-4 w-4" />
+              <span>{lead.workType}</span>
+            </div>
           </div>
-          {session?.ratingReason && (
-            <p className="mt-2 text-sm text-muted-foreground">{session.ratingReason}</p>
-          )}
         </div>
 
-        {/* Contact Details */}
+        <div className="mt-6 flex items-center gap-3 rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className={cn(
+                    "h-4 w-4",
+                    i < lead.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"
+                  )}
+                />
+              ))}
+            </div>
+            <span className="text-sm font-semibold text-slate-700">{lead.rating}/5</span>
+          </div>
+          <div className="h-4 w-px bg-indigo-200" />
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+            <p className="text-sm text-indigo-600">{lead.ratingReason}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-indigo-600" />
+            <h4 className="font-semibold text-indigo-700">AI Analysis</h4>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full shrink-0",
+                lead.rating >= 4 ? "bg-indigo-100" : lead.rating >= 3 ? "bg-blue-100" : "bg-slate-100"
+              )}>
+                <Target className={cn(
+                  "h-4 w-4",
+                  lead.rating >= 4 ? "text-indigo-600" : lead.rating >= 3 ? "text-blue-600" : "text-slate-500"
+                )} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700">Priority Level</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lead.rating >= 4 ? "High priority - Immediate attention recommended" 
+                    : lead.rating >= 3 ? "Medium priority - Follow up within 48 hours"
+                    : "Low priority - Add to nurture sequence"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full shrink-0",
+                lead.status === "manual" ? "bg-violet-100" : "bg-emerald-100"
+              )}>
+                {lead.status === "manual" ? (
+                  <AlertCircle className="h-4 w-4 text-violet-600" />
+                ) : (
+                  <Check className="h-4 w-4 text-emerald-600" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700">Status</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lead.status === "manual" ? "Requires human review before action" 
+                    : lead.status === "pending" ? "Ready for automated processing"
+                    : lead.status === "approved" ? "Approved and ready for follow-up"
+                    : "Declined - May be reconsidered later"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 shrink-0">
+                <TrendingUp className="h-4 w-4 text-slate-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700">Conversion Potential</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lead.rating >= 4 ? "High conversion likelihood - Strong interest signals" 
+                    : lead.rating >= 3 ? "Moderate conversion potential - Standard follow-up"
+                    : "Lower conversion probability - Consider automated nurture"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 shrink-0">
+                <Zap className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700">Recommended Action</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {lead.rating >= 4 ? "Contact within 24 hours for best results" 
+                    : lead.status === "manual" ? "Review and categorize before proceeding"
+                    : lead.rating >= 3 ? "Schedule follow-up call within 48 hours"
+                    : "Send welcome email sequence and periodic updates"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-6 grid gap-3">
-          <div className="flex items-center gap-3 rounded-lg bg-secondary p-3">
-            <Phone className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 hover:border-blue-200 transition-colors">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+              <Phone className="h-5 w-5 text-blue-500" />
+            </div>
             <div>
-              <p className="text-xs text-muted-foreground">Phone</p>
-              <p className="font-medium text-foreground">{lead.phone}</p>
+              <p className="text-xs text-slate-500">Phone</p>
+              <p className="font-medium text-slate-800">{lead.phone}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-lg bg-secondary p-3">
-            <Mail className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 hover:border-blue-200 transition-colors">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+              <Mail className="h-5 w-5 text-blue-500" />
+            </div>
             <div>
-              <p className="text-xs text-muted-foreground">Email</p>
-              <p className="font-medium text-foreground">{lead.email}</p>
+              <p className="text-xs text-slate-500">Email</p>
+              <p className="font-medium text-slate-800">{lead.email}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-lg bg-secondary p-3">
-            <MapPin className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 hover:border-blue-200 transition-colors">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+              <MapPin className="h-5 w-5 text-blue-500" />
+            </div>
             <div>
-              <p className="text-xs text-muted-foreground">Location</p>
-              <p className="font-medium text-foreground">{location}</p>
+              <p className="text-xs text-slate-500">Location</p>
+              <p className="font-medium text-slate-800">{lead.location}</p>
             </div>
           </div>
         </div>
 
-        {/* Conversation Summary */}
         <div className="mt-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
             <MessageSquare className="h-4 w-4" />
-            Message
+            Conversation Summary
           </div>
-          <div className="mt-2 rounded-lg bg-secondary p-4 text-sm text-foreground leading-relaxed">
-            {message}
+          <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 leading-relaxed">
+            {lead.conversationSummary}
           </div>
         </div>
 
-        {/* Action Buttons - Only show for active/pending leads */}
-        {isPending && (
-          <div className="mt-6 space-y-4">
-            {/* Approve Message */}
-            <div className="rounded-lg border border-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-primary cursor-pointer">
+        {lead.status === "manual" && (
+          <>
+            <div className="mt-6">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm font-medium text-emerald-600">
                   <Check className="h-4 w-4" />
                   Approval Message
                 </label>
-              </div>
-              <Textarea
-                value={approveMessage}
-                onChange={(e) => setApproveMessage(e.target.value)}
-                className="min-h-[80px] bg-secondary resize-none cursor-text border-border"
-                placeholder="Enter approval message..."
-              />
-              <Button
-                onClick={() => handleSend("approve")}
-                disabled={isSending !== null || !approveMessage.trim()}
-                className="mt-2 w-full bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
-              >
-                {isSending === "approve" ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Approval
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* Decline Message */}
-            <div className="rounded-lg border border-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-destructive cursor-pointer">
-                  <XCircle className="h-4 w-4" />
-                  Decline Message
-                </label>
-              </div>
-              <Textarea
-                value={declineMessage}
-                onChange={(e) => setDeclineMessage(e.target.value)}
-                className="min-h-[80px] bg-secondary resize-none cursor-text border-border"
-                placeholder="Enter decline message..."
-              />
-              <Button
-                onClick={() => handleSend("decline")}
-                disabled={isSending !== null || !declineMessage.trim()}
-                variant="destructive"
-                className="mt-2 w-full cursor-pointer"
-              >
-                {isSending === "decline" ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="mr-2 h-4 w-4" />
-                    Send Decline
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* Mark as Unrelated */}
-            <div className="rounded-lg border border-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer">
-                  <Filter className="h-4 w-4" />
-                  Mark as Unrelated
-                </label>
-              </div>
-              <Textarea
-                value={unrelatedMessage}
-                onChange={(e) => setUnrelatedMessage(e.target.value)}
-                className="min-h-[60px] bg-secondary resize-none cursor-text border-border"
-                placeholder="Optional message for unrelated..."
-              />
-              <Button
-                onClick={() => handleSend("unrelated")}
-                disabled={isSending !== null}
-                variant="outline"
-                className="mt-2 w-full cursor-pointer"
-              >
-                {isSending === "unrelated" ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Marking...
-                  </>
-                ) : (
-                  <>
-                    <Filter className="mr-2 h-4 w-4" />
-                    Mark as Unrelated
-                  </>
-                )}
-              </Button>
-            </div>
           </div>
-        )}
-
-        {/* Show status badges for completed leads */}
-        {sessionStatus === "completed" && (
-          <div className="mt-6 rounded-lg bg-secondary p-4">
-            <p className="text-sm text-muted-foreground">
-              This lead has been <span className="font-medium text-foreground">forwarded</span>.
-              The conversation has been completed.
-            </p>
-          </div>
-        )}
-
-        {/* Timestamps */}
-        <div className="mt-8 space-y-2 text-sm text-muted-foreground">
-          {lead.updatedAt !== lead.createdAt && (
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span className="font-medium">Updated:</span> {formatDate(lead.updatedAt)}
-            </div>
-          )}
-          {lead.lastContactedAt && (
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              <span className="font-medium">Last Contacted:</span> {formatDate(lead.lastContactedAt)}
-            </div>
+          <Textarea
+            value={approveMessage}
+            onChange={(e) => setApproveMessage(e.target.value)}
+            className="mt-2 min-h-[120px] bg-white border-slate-200 resize-none focus:border-blue-400 focus:ring-blue-100 text-gray-950 placeholder:text-slate-500"
+            placeholder="Enter approval message..."
+            disabled={!isActionable}
+          />
+          {isActionable && (
+            <Button
+              onClick={() => handleSend("approve")}
+              disabled={isSending !== null || !approveMessage.trim()}
+              className="mt-3 w-full bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+            >
+              {isSending === "approve" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Approval
+                </>
+              )}
+            </Button>
           )}
         </div>
-      </div>
+
+        <div className="mt-6">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm font-medium text-red-600">
+              <XCircle className="h-4 w-4" />
+              Decline Message
+            </label>
+          </div>
+          <Textarea
+                value={declineMessage}
+                onChange={(e) => setDeclineMessage(e.target.value)}
+                className="mt-2 min-h-[120px] bg-white border-slate-200 resize-none focus:border-blue-400 focus:ring-blue-100 text-gray-950 placeholder:text-slate-500"
+                placeholder="Enter decline message..."
+                disabled={!isActionable}
+              />
+              {isActionable && (
+            <button
+              onClick={() => handleSend("decline")}
+              disabled={isSending !== null || !declineMessage.trim()}
+              className="mt-3 w-full px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isSending === "decline" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Send Decline
+                </>
+              )}
+            </button>
+          )}
+        </div>
+          </>
+        )}
+
+        <div className="mt-8 space-y-2 text-sm text-slate-500 flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          <span>Received: {formatDate(lead.createdAt)}</span>
+          {lead.updatedAt !== lead.createdAt && (
+            <>
+              <span className="text-slate-300">•</span>
+              <span>Updated: {formatDate(lead.updatedAt)}</span>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

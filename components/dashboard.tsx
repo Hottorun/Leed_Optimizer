@@ -1,64 +1,31 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback } from "react"
 import useSWR from "swr"
-import { Plus } from "lucide-react"
-import { toast } from "sonner"
-import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
-import { StatsCards } from "./stats-cards"
+import { BigStatsHeader } from "./big-stats-header"
 import { LeadsGrid } from "./leads-grid"
 import { LeadDetailPanel } from "./lead-detail-panel"
-import { SettingsDialog } from "./settings-dialog"
-import { AddLeadDialog } from "./add-lead-dialog"
-import { UserManagementDialog } from "./user-management-dialog"
-import { TeamDialog, TeamManagement } from "./team-dialog"
-import { Toaster } from "@/components/ui/sonner"
+import { Search, Mail, LayoutGrid, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { LanguageProvider } from "./language-provider"
-import type { Lead, LeadStatus, ContactPlatform, ViewMode, AppSettings, GroupByOption, CustomerType, Team, RatingFilter } from "@/lib/types"
+import { Pagination } from "./pagination"
+import { ThemeBackground } from "@/lib/use-theme-gradient"
+import { useProfile } from "@/lib/use-profile"
+import type { Lead, LeadStatus, LeadSource } from "@/lib/types"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
-interface User {
-  id: string
-  email: string
-  name: string
-  role: "admin" | "user"
-  teamId?: string
-  teamRole?: "owner" | "admin" | "member"
-}
+const LEADS_PER_PAGE = 20
 
 export function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<LeadStatus | null>(null)
-  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all")
-  const [platformFilter, setPlatformFilter] = useState<ContactPlatform | "all">("all")
-  const [customerTypeFilter, setCustomerTypeFilter] = useState<CustomerType>("all")
-  const [groupBy, setGroupBy] = useState<GroupByOption>("none")
+  const [sourceFilter, setSourceFilter] = useState<LeadSource | null>(null)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>("grid")
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [addLeadOpen, setAddLeadOpen] = useState(false)
-  const [userManagementOpen, setUserManagementOpen] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
-  const [team, setTeam] = useState<Team | null>(null)
-  const [showTeamDialog, setShowTeamDialog] = useState(false)
-  const [showTeamManagement, setShowTeamManagement] = useState(false)
-  const [settings, setSettings] = useState<AppSettings>({
-    autoDeleteDeclinedDays: 0,
-    webhookUrl: "",
-    autoApproveEnabled: false,
-    autoApproveMinRating: 4,
-    autoDeclineUnrelated: false,
-    followUpDays: 3,
-    followUpMessage: "Hi {name}, just checking in on your inquiry. Are you still interested?",
-    defaultApproveMessage: "Thank you for your interest! We'd love to work with you.",
-    defaultDeclineMessage: "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
-    defaultUnrelatedMessage: "This message doesn't seem to be related to our services.",
-    language: "de",
-  })
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const { profile } = useProfile()
 
   const { data: leads = [], mutate, isValidating } = useSWR<Lead[]>(
     "/api/leads",
@@ -68,59 +35,13 @@ export function Dashboard() {
     }
   )
 
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((res) => res.json())
-      .then(setSettings)
-      .catch(console.error)
-    
-    fetch("/api/auth")
-      .then((res) => res.json())
-      .then(async (data) => {
-        setUser(data.user)
-        
-        // Check if user has a team
-        if (data.user?.teamId) {
-          const teamRes = await fetch("/api/teams")
-          const teamData = await teamRes.json()
-          setTeam(teamData.team)
-        } else if (data.user) {
-          // User is logged in but has no team
-          setShowTeamDialog(true)
-        }
-      })
-      .catch(console.error)
-  }, [])
-
-  const handleTeamCreated = async () => {
-    const teamRes = await fetch("/api/teams")
-    const teamData = await teamRes.json()
-    setTeam(teamData.team)
-    // Refresh user to get updated teamId
-    const authRes = await fetch("/api/auth")
-    const authData = await authRes.json()
-    setUser(authData.user)
-  }
-
-  useEffect(() => {
-    if (settings.autoDeleteDeclinedDays > 0) {
-      fetch("/api/cron/auto-delete", { method: "POST" })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.deletedCount > 0) {
-            mutate()
-          }
-        })
-        .catch(console.error)
-    }
-  }, [settings.autoDeleteDeclinedDays, mutate])
-
   const handleRefresh = useCallback(() => {
     mutate()
   }, [mutate])
 
   const handleFilterChange = (filter: LeadStatus | null) => {
     setStatusFilter(filter)
+    setCurrentPage(1)
   }
 
   const handleSelectLead = (lead: Lead) => {
@@ -147,14 +68,8 @@ export function Dashboard() {
     }
   }
 
-  const handleSendMessage = async (action: "approve" | "decline" | "unrelated", message: string) => {
+  const handleSendMessage = async (action: "approve" | "decline", message: string) => {
     if (!selectedLead) return
-
-    const actionLabels = {
-      approve: "approved",
-      decline: "declined",
-      unrelated: "marked as unrelated",
-    }
 
     const response = await fetch(`/api/leads/${selectedLead.id}/send`, {
       method: "POST",
@@ -166,203 +81,177 @@ export function Dashboard() {
       const result = await response.json()
       setSelectedLead(result.lead)
       mutate()
-      toast.success(`Lead ${actionLabels[action]}!`, {
-        description: "Webhook sent to n8n",
-      })
-    } else {
-      toast.error("Failed to send message")
     }
   }
 
-  const handleDeleteLead = async () => {
-    if (!selectedLead) return
+  const filteredLeads = leads.filter((lead) => {
+    const matchesSearch =
+      !searchQuery ||
+      lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.workType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.conversationSummary.toLowerCase().includes(searchQuery.toLowerCase())
 
-    const leadName = selectedLead.name
-    const response = await fetch(`/api/leads/${selectedLead.id}`, {
-      method: "DELETE",
-    })
+    const matchesStatus = !statusFilter || lead.status === statusFilter
+    const matchesSource = !sourceFilter || lead.source === sourceFilter
 
-    if (response.ok) {
-      setSelectedLead(null)
-      mutate()
-      toast.success(`${leadName} deleted`)
-    } else {
-      toast.error("Failed to delete lead")
-    }
-  }
+    return matchesSearch && matchesStatus && matchesSource
+  })
 
-  const handleUpdateSettings = async (newSettings: Partial<AppSettings>) => {
-    const response = await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newSettings),
-    })
+  const whatsappLeads = filteredLeads.filter(l => l.source === "whatsapp")
+  const emailLeads = filteredLeads.filter(l => l.source === "email")
 
-    if (response.ok) {
-      const updated = await response.json()
-      setSettings(updated)
-      toast.success("Settings saved successfully")
-    } else {
-      toast.error("Failed to save settings")
-    }
-  }
-
-  const handleDeleteAllLeads = async () => {
-    const response = await fetch("/api/leads/bulk?action=all", {
-      method: "DELETE",
-    })
-
-    if (response.ok) {
-      const result = await response.json()
-      setSelectedLead(null)
-      mutate()
-      toast.success(`All ${result.deletedCount} leads deleted`)
-    } else {
-      toast.error("Failed to delete all leads")
-    }
-  }
-
-  const handleDeleteOldDeclined = async (): Promise<number> => {
-    const response = await fetch(
-      `/api/leads/bulk?action=old-declined&days=${settings.autoDeleteDeclinedDays}`,
-      { method: "DELETE" }
-    )
-
-    if (response.ok) {
-      const result = await response.json()
-      mutate()
-      return result.deletedCount
-    }
-    return 0
-  }
-
-  const handleAddLead = async (leadData: {
-    name: string
-    phone: string
-    email: string
-    location: string
-    workType: string
-    conversationSummary: string
-    approveMessage: string
-    declineMessage: string
-    rating: number
-    ratingReason: string
-    contactPlatform: ContactPlatform
-  }) => {
-    const response = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(leadData),
-    })
-
-    if (response.ok) {
-      const result = await response.json()
-      mutate()
-      if (result.autoApproved) {
-        toast.success(`${leadData.name} added and auto-approved!`, {
-          description: `${leadData.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"} lead with ${leadData.rating} stars`,
-        })
-      } else {
-        toast.success(`${leadData.name} added successfully!`, {
-          description: `${leadData.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"} lead - Pending review`,
-        })
-      }
-    } else {
-      toast.error("Failed to add lead")
-    }
-  }
-
-  const getFilterTitle = () => {
-    const parts: string[] = []
-    if (statusFilter) parts.push(statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1))
-    if (ratingFilter) parts.push(`${ratingFilter}+ Stars`)
-    if (platformFilter && platformFilter !== "all") {
-      parts.push(platformFilter === "whatsapp" ? "WhatsApp" : "Email")
-    }
-    if (customerTypeFilter && customerTypeFilter !== "all") {
-      if (customerTypeFilter === "first-time") parts.push("First-time")
-      else if (customerTypeFilter === "returning") parts.push("Returning")
-      else if (customerTypeFilter === "loyal") parts.push("Loyal (3+)")
-    }
-    
-    if (parts.length === 0) return "All Leads"
-    return parts.join(" - ")
-  }
+  const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE)
+  const startIndex = (currentPage - 1) * LEADS_PER_PAGE
+  const endIndex = startIndex + LEADS_PER_PAGE
+  const paginatedFilteredLeads = filteredLeads.slice(startIndex, endIndex)
+  
+  const paginatedWhatsapp = paginatedFilteredLeads.filter(l => l.source === "whatsapp")
+  const paginatedEmail = paginatedFilteredLeads.filter(l => l.source === "email")
 
   return (
-    <LanguageProvider initialLanguage={settings.language}>
-      <div className="min-h-screen bg-background">
-        <AppSidebar
-          activeFilter={statusFilter}
-          onFilterChange={handleFilterChange}
-          customerTypeFilter={customerTypeFilter}
-          onCustomerTypeFilterChange={setCustomerTypeFilter}
-          ratingFilter={ratingFilter}
-          onRatingFilterChange={setRatingFilter}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenUserManagement={() => setUserManagementOpen(true)}
-          onOpenTeamManagement={() => setShowTeamManagement(true)}
-          user={user}
-          leads={leads}
-          onRefresh={handleRefresh}
-          mobileMenuOpen={mobileMenuOpen}
-          onMobileMenuOpen={() => setMobileMenuOpen(true)}
-          onMobileMenuClose={() => setMobileMenuOpen(false)}
-          onSelectLead={handleSelectLead}
-        />
+    <ThemeBackground>
+      <AppHeader onRefresh={handleRefresh} isRefreshing={isValidating} />
+      
+      <BigStatsHeader 
+        leads={leads} 
+        onFilterClick={handleFilterChange}
+        activeFilter={statusFilter}
+        companyName={profile.company}
+      />
 
-      <div className="flex-1 lg:pl-64">
-        <AppHeader
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          groupBy={groupBy}
-          onGroupByChange={setGroupBy}
-          onOpenMobileMenu={() => setMobileMenuOpen(true)}
-        />
-
-        <main className="p-4 sm:p-6 pt-16 sm:pt-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Lead Management</h1>
-            <p className="mt-1 text-muted-foreground">
-              Review and respond to incoming customer inquiries
-            </p>
+      <main className="p-6">
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-800">All Leads</h2>
+            <p className="text-sm text-slate-500">{leads.length} total leads</p>
           </div>
-
-          <StatsCards
-            leads={leads}
-            activeStatus={statusFilter}
-            activePlatform={platformFilter}
-            onStatsClick={handleFilterChange}
-            onPlatformClick={(platform) => setPlatformFilter(platform)}
-          />
-
-          <div className="mt-8">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">
-                {getFilterTitle()}
-              </h2>
-              <span className="text-sm text-muted-foreground">
-                {leads.length} total leads
-              </span>
+          
+          <div className="flex flex-wrap gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search leads..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 w-full sm:w-64 rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <select
+                value={statusFilter || ""}
+                onChange={(e) => setStatusFilter(e.target.value as LeadStatus || null)}
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
+              >
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="manual">Manual Review</option>
+                <option value="approved">Approved</option>
+                <option value="declined">Declined</option>
+              </select>
+              
+              <select
+                value={sourceFilter || ""}
+                onChange={(e) => setSourceFilter(e.target.value as LeadSource || null)}
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
+              >
+                <option value="">All Sources</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="email">Email</option>
+              </select>
             </div>
 
+            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-md transition-all duration-200 ${
+                  viewMode === "grid"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-md transition-all duration-200 ${
+                  viewMode === "list"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {paginatedWhatsapp.length > 0 && (
+          <div className="mb-8">
+            <button className="flex items-center gap-2 mb-4 group hover:opacity-80 transition-opacity duration-200">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 group-hover:bg-emerald-100 transition-colors duration-200">
+                <svg className="h-5 w-5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+              </div>
+              <h3 className="text-base font-medium text-slate-700 group-hover:text-blue-600 transition-colors duration-200">WhatsApp Leads</h3>
+              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-600">
+                {whatsappLeads.length}
+              </span>
+            </button>
             <LeadsGrid
-              leads={leads}
+              leads={paginatedWhatsapp}
               searchQuery={searchQuery}
-              statusFilter={statusFilter}
-              ratingFilter={ratingFilter}
-              platformFilter={platformFilter}
-              customerTypeFilter={customerTypeFilter}
-              groupBy={groupBy}
               selectedLeadId={selectedLead?.id ?? null}
               onSelectLead={handleSelectLead}
               viewMode={viewMode}
             />
           </div>
-        </main>
-      </div>
+        )}
+
+        {paginatedEmail.length > 0 && (
+          <div className="mb-8">
+            <button className="flex items-center gap-2 mb-4 group hover:opacity-80 transition-opacity duration-200">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 group-hover:bg-blue-100 transition-colors duration-200">
+                <Mail className="h-5 w-5 text-blue-400" />
+              </div>
+              <h3 className="text-base font-medium text-slate-700 group-hover:text-blue-600 transition-colors duration-200">Email Leads</h3>
+              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-600">
+                {emailLeads.length}
+              </span>
+            </button>
+            <LeadsGrid
+              leads={paginatedEmail}
+              searchQuery={searchQuery}
+              selectedLeadId={selectedLead?.id ?? null}
+              onSelectLead={handleSelectLead}
+              viewMode={viewMode}
+            />
+          </div>
+        )}
+
+        {filteredLeads.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 mb-4">
+              <svg className="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-slate-700">No leads found</h3>
+            <p className="text-slate-500 mt-1">Try adjusting your search or filters</p>
+          </div>
+        )}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      </main>
 
       {selectedLead && (
         <LeadDetailPanel
@@ -370,55 +259,8 @@ export function Dashboard() {
           onClose={handleCloseLead}
           onUpdate={handleUpdateLead}
           onSendMessage={handleSendMessage}
-          onDelete={handleDeleteLead}
         />
       )}
-
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onUpdateSettings={handleUpdateSettings}
-        onDeleteAllLeads={handleDeleteAllLeads}
-        onDeleteOldDeclined={handleDeleteOldDeclined}
-        teamRole={user?.teamRole}
-      />
-
-      <AddLeadDialog
-        open={addLeadOpen}
-        onOpenChange={setAddLeadOpen}
-        onAddLead={handleAddLead}
-      />
-
-      <UserManagementDialog
-        open={userManagementOpen}
-        onOpenChange={setUserManagementOpen}
-      />
-
-      <TeamDialog
-        open={showTeamDialog}
-        onOpenChange={setShowTeamDialog}
-        onTeamCreated={handleTeamCreated}
-      />
-
-      <TeamManagement
-        open={showTeamManagement}
-        onOpenChange={setShowTeamManagement}
-        team={team}
-        onTeamUpdate={handleTeamCreated}
-      />
-
-      <Toaster position="top-right" />
-
-      <Button
-        onClick={() => setAddLeadOpen(true)}
-        className="fixed bottom-6 right-6 z-40 shadow-lg cursor-pointer h-14 px-6 text-base"
-        size="lg"
-      >
-        <Plus className="mr-2 h-6 w-6" />
-        Add Lead
-      </Button>
-    </div>
-    </LanguageProvider>
+    </ThemeBackground>
   )
 }

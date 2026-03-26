@@ -1,6 +1,6 @@
 # Leed_Optimizer
 
-# api:
+api:
 ## JSON Request Structure (from your backend to this platform)
 
 **POST to `/api/leads`:**
@@ -20,20 +20,23 @@
 }
 ```
 
+## Response Structure (sent to your chatbot when user clicks Send)
 
-# to run:
-- npm install
-- create a .env file and add:
--   `NEXT_PUBLIC_SUPABASE_URL=`
--   `NEXT_PUBLIC_SUPABASE_ANON_KEY=`
-- npm run dev
+**Sent to `CHATBOT_WEBHOOK_URL` environment variable:**
 
-need to do:
-How Auto-Delete Works
-The auto-delete feature:
-- Triggers: When the dashboard loads, it checks if autoDeleteDeclinedDays > 0 in settings
-For production, you should set up a cron job to call this endpoint daily:
-Example cron job (run daily at midnight)
-curl -X POST https://your-domain.com/api/cron/auto-delete
+```json
+{
+  "leadId": "lead-123456789",
+  "action": "approve" | "decline",
+  "message": "The edited message content",
+  "phone": "+1234567890"
+}
+```
 
 
+Set the `CHATBOT_WEBHOOK_URL` environment variable to configure where responses are sent.
+
+
+to run:
+- pnpm install
+- pnpm dev

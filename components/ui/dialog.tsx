@@ -6,30 +6,10 @@ import { XIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
-const DialogContext = React.createContext<{
-  descriptionId: string
-  hasDescription: boolean
-  setHasDescription: (value: boolean) => void
-} | null>(null)
-
-function useDialogContext() {
-  const context = React.useContext(DialogContext)
-  if (!context) {
-    throw new Error('Dialog components must be used within Dialog')
-  }
-  return context
-}
-
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  const descriptionId = React.useId()
-  const [hasDescription, setHasDescription] = React.useState(false)
-  return (
-    <DialogContext.Provider value={{ descriptionId, hasDescription, setHasDescription }}>
-      <DialogPrimitive.Root data-slot="dialog" {...props} />
-    </DialogContext.Provider>
-  )
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 
 function DialogTrigger({
@@ -74,13 +54,11 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
-  const { descriptionId, hasDescription } = useDialogContext()
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        aria-describedby={hasDescription ? descriptionId : undefined}
         className={cn(
           'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
           className,
@@ -142,15 +120,9 @@ function DialogDescription({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  const { descriptionId, setHasDescription } = useDialogContext()
-  React.useEffect(() => {
-    setHasDescription(true)
-    return () => setHasDescription(false)
-  }, [setHasDescription])
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      id={descriptionId}
       className={cn('text-muted-foreground text-sm', className)}
       {...props}
     />

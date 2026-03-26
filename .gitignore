@@ -1,6 +1,2 @@
-.env
-backend/.env
-.DS_Store
-
-node_modules/
+Aclea/
 .next/

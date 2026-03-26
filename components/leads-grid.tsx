@@ -1,148 +1,59 @@
 "use client"
 
 import { LeadCard } from "./lead-card"
-import { LeadListItem } from "./lead-list-item"
-import { LeadSquareCard } from "./lead-square-card"
-import type { Lead, LeadStatus, ContactPlatform, ViewMode, CustomerType, RatingFilter, GroupByOption } from "@/lib/types"
-import { format, isToday, isYesterday, isThisWeek } from "date-fns"
+import { Mail, Sparkles } from "lucide-react"
+import type { Lead, LeadStatus } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 interface LeadsGridProps {
   leads: Lead[]
   searchQuery: string
-  statusFilter: LeadStatus | null
-  platformFilter: ContactPlatform | "all"
-  customerTypeFilter: CustomerType
-  ratingFilter: RatingFilter
-  groupBy: GroupByOption
-  viewMode: ViewMode
   selectedLeadId: string | null
   onSelectLead: (lead: Lead) => void
-}
-
-function normalizeSearchQuery(query: string): string[] {
-  return query
-    .toLowerCase()
-    .trim()
-    .split(/\s+/)
-    .filter(term => term.length > 0)
-}
-
-function fuzzyMatch(text: string, searchTerms: string[]): boolean {
-  if (searchTerms.length === 0) return true
-  
-  const lowerText = text.toLowerCase()
-  
-  return searchTerms.every(term => {
-    const termLower = term.toLowerCase()
-    return lowerText.includes(termLower)
-  })
+  viewMode?: "grid" | "list"
 }
 
 export function LeadsGrid({
   leads,
   searchQuery,
-  statusFilter,
-  platformFilter,
-  customerTypeFilter,
-  ratingFilter,
-  groupBy,
-  viewMode,
   selectedLeadId,
   onSelectLead,
+  viewMode = "grid",
 }: LeadsGridProps) {
-  const searchTerms = normalizeSearchQuery(searchQuery)
-  
-  const filteredLeads = leads.filter((lead) => {
-    const session = lead.session
-    const collectedData = session?.collectedData || {}
-
-    if (searchTerms.length > 0) {
-      const searchableFields = [
-        lead.name,
-        lead.phone,
-        lead.email,
-        collectedData.location || "",
-        collectedData.workType || "",
-        collectedData.message || "",
-        session?.ratingReason || "",
-      ].join(' ').toLowerCase()
-      
-      if (!fuzzyMatch(searchableFields, searchTerms)) {
-        return false
-      }
-    }
-
-    const matchesStatus = !statusFilter || (session?.status as LeadStatus) === statusFilter
-    const matchesPlatform = platformFilter === "all" || collectedData.contactPlatform === platformFilter
-    
-    const matchesCustomerType = 
-      customerTypeFilter === "all" ||
-      (customerTypeFilter === "first-time" && lead.leadCount === 1) ||
-      (customerTypeFilter === "returning" && lead.leadCount > 1) ||
-      (customerTypeFilter === "loyal" && lead.leadCount >= 3)
-
-    const ratingMatch = ratingFilter === "all" || 
-      (ratingFilter === 5 && session?.rating === true) ||
-      (ratingFilter === 1 && session?.rating === false)
-
-    return matchesStatus && matchesPlatform && matchesCustomerType && ratingMatch
-  })
-
-  function getDateGroup(dateString: string): string {
-    const date = new Date(dateString)
-    if (isToday(date)) return "Today"
-    if (isYesterday(date)) return "Yesterday"
-    if (isThisWeek(date)) return "This Week"
-    return format(date, "MMMM yyyy")
+  const sortByPriority = (a: Lead, b: Lead) => {
+    const aScore = a.rating * 10 + (a.status === "manual" ? 5 : 0) + (a.isLoyal ? 3 : 0)
+    const bScore = b.rating * 10 + (b.status === "manual" ? 5 : 0) + (b.isLoyal ? 3 : 0)
+    return bScore - aScore
   }
 
-  function getGroupKey(lead: Lead): string {
-    const session = lead.session
-    const collectedData = session?.collectedData || {}
-
-    switch (groupBy) {
-      case "rating":
-        return session?.rating === true ? "Qualified" : session?.rating === false ? "Not Qualified" : "Pending Review"
-      case "status":
-        return (session?.status || "active").charAt(0).toUpperCase() + (session?.status || "active").slice(1)
-      case "platform":
-        return collectedData.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
-      case "customerType":
-        if (lead.leadCount >= 3) return "Loyal Customers"
-        if (lead.leadCount > 1) return "Returning Customers"
-        return "First-time Customers"
-      case "date":
-        return getDateGroup(lead.createdAt)
-      default:
-        return ""
-    }
+  const getAiRec = (lead: Lead) => {
+    if (lead.rating >= 4) return { text: "High", color: "text-indigo-700", bg: "bg-indigo-50" }
+    if (lead.status === "manual") return { text: "Review", color: "text-indigo-600", bg: "bg-indigo-50" }
+    if (lead.rating >= 3) return { text: "Medium", color: "text-indigo-500", bg: "bg-indigo-50" }
+    return { text: "Low", color: "text-indigo-400", bg: "bg-indigo-50" }
   }
 
-  const groupedLeads = groupBy !== "none"
-    ? filteredLeads.reduce((groups, lead) => {
-        const key = getGroupKey(lead)
-        if (!groups[key]) groups[key] = []
-        groups[key].push(lead)
-        return groups
-      }, {} as Record<string, Lead[]>)
-    : { "": filteredLeads }
-
-  const sortLeads = (leadsToSort: Lead[]): Lead[] => {
-    return [...leadsToSort].sort((a, b) => {
-      const aStatus = a.session?.status || "active"
-      const bStatus = b.session?.status || "active"
-      if (aStatus === "active" && bStatus !== "active") return -1
-      if (aStatus !== "active" && bStatus === "active") return 1
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  const displayLeads = leads
+    .filter((lead) => {
+      if (!searchQuery) return true
+      const query = searchQuery.toLowerCase()
+      return (
+        lead.name.toLowerCase().includes(query) ||
+        lead.phone.toLowerCase().includes(query) ||
+        lead.email.toLowerCase().includes(query) ||
+        lead.location.toLowerCase().includes(query) ||
+        lead.workType.toLowerCase().includes(query) ||
+        lead.conversationSummary.toLowerCase().includes(query)
+      )
     })
-  }
+    .sort(sortByPriority)
 
-  if (filteredLeads.length === 0) {
+  if (displayLeads.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-16 cursor-default">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 py-16">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
           <svg
-            className="h-8 w-8 text-muted-foreground"
+            className="h-8 w-8 text-slate-600"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -155,90 +66,95 @@ export function LeadsGrid({
             />
           </svg>
         </div>
-        <h3 className="mt-4 text-lg font-medium text-foreground">No leads found</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {searchQuery || statusFilter || platformFilter !== "all" || customerTypeFilter !== "all" || ratingFilter !== "all"
-            ? "Try adjusting your search or filters"
+        <h3 className="mt-4 text-lg font-medium text-slate-700">No leads found</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          {searchQuery
+            ? "Try adjusting your search"
             : "New leads will appear here"}
         </p>
       </div>
     )
   }
 
-  const renderLeadItem = (lead: Lead) => {
-    if (viewMode === "squares") {
-      return (
-        <LeadSquareCard
-          key={lead.id}
-          lead={lead}
-          onClick={() => onSelectLead(lead)}
-          isSelected={selectedLeadId === lead.id}
-        />
-      )
-    }
-    if (viewMode === "list") {
-      return (
-        <LeadListItem
-          key={lead.id}
-          lead={lead}
-          onClick={() => onSelectLead(lead)}
-          isSelected={selectedLeadId === lead.id}
-        />
-      )
-    }
+  if (viewMode === "list") {
     return (
-      <LeadCard
-        key={lead.id}
-        lead={lead}
-        onClick={() => onSelectLead(lead)}
-        isSelected={selectedLeadId === lead.id}
-      />
-    )
-  }
-
-  if (groupBy !== "none") {
-    return (
-      <div className="space-y-6">
-        {Object.entries(groupedLeads)
-          .sort(([a], [b]) => {
-            if (a === "Today") return -1
-            if (a === "Yesterday") return b === "Today" ? 1 : -1
-            if (a === "This Week") return (b === "Today" || b === "Yesterday") ? 1 : -1
-            return a.localeCompare(b)
-          })
-          .map(([groupName, groupLeads]) => (
-            <div key={groupName} className="space-y-3">
-              <div className="flex items-center gap-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  {groupName}
-                </h3>
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">{groupLeads.length}</span>
-              </div>
-              <div className={
-                viewMode === "squares" 
-                  ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3"
-                  : viewMode === "list"
-                  ? "flex flex-col gap-2"
-                  : "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-              }>
-                {sortLeads(groupLeads).map(renderLeadItem)}
-              </div>
+      <div className="space-y-2">
+        {displayLeads.map((lead) => (
+          <button
+            key={lead.id}
+            onClick={() => onSelectLead(lead)}
+            className={cn(
+              "w-full flex items-center gap-4 rounded-lg border bg-white p-4 text-left transition-all duration-200 cursor-pointer",
+              selectedLeadId === lead.id
+                ? "border-slate-400 shadow-md ring-2 ring-slate-100"
+                : "border-slate-200 hover:border-slate-300 hover:shadow-md hover:bg-slate-50"
+            )}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+              {lead.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()}
             </div>
-          ))}
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-slate-800 truncate">{lead.name}</h3>
+                <span className={cn(
+                  "h-2 w-2 rounded-full shrink-0",
+                  lead.status === "pending" ? "bg-slate-400" :
+                  lead.status === "approved" ? "bg-slate-500" :
+                  lead.status === "manual" ? "bg-slate-600" : "bg-slate-400"
+                )} />
+                <span className="text-xs text-slate-500">{lead.status === "manual" ? "Review" : lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}</span>
+              </div>
+              <p className="text-sm text-slate-500 truncate">{lead.workType} • {lead.location}</p>
+            </div>
+
+            <div className="hidden md:flex items-center gap-4 text-sm text-slate-600">
+              <span>{lead.phone}</span>
+              <span className={cn(
+                "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600",
+              )}>
+                {lead.source === "whatsapp" ? (
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                ) : (
+                  <Mail className="h-3 w-3" />
+                )}
+                {lead.source === "whatsapp" ? "WhatsApp" : "Email"}
+              </span>
+            </div>
+
+            {(() => {
+              const rec = getAiRec(lead)
+              return (
+                <span className={cn(
+                  "flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium",
+                  rec.bg, rec.color
+                )}>
+                  <Sparkles className="h-3 w-3" />
+                  {rec.text}
+                </span>
+              )
+            })()}
+          </button>
+        ))}
       </div>
     )
   }
 
   return (
-    <div className={
-      viewMode === "squares" 
-        ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3"
-        : viewMode === "list"
-        ? "flex flex-col gap-2"
-        : "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-    }>
-      {sortLeads(filteredLeads).map(renderLeadItem)}
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {displayLeads.map((lead) => (
+        <LeadCard
+          key={lead.id}
+          lead={lead}
+          onClick={() => onSelectLead(lead)}
+          isSelected={selectedLeadId === lead.id}
+        />
+      ))}
     </div>
   )
 }

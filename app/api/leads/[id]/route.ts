@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const lead = getLeadById(id)
+  const lead = await getLeadById(id)
 
   if (!lead) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 })
@@ -23,7 +23,7 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    const updatedLead = updateLead(id, body)
+    const updatedLead = await updateLead(id, body)
 
     if (!updatedLead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 })
@@ -43,7 +43,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const success = deleteLead(id)
+  const success = await deleteLead(id)
 
   if (!success) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 })

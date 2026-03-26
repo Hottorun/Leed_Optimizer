@@ -28,11 +28,9 @@ export async function POST(
       return NextResponse.json({ error: "Lead session not found" }, { status: 404 })
     }
 
-    // Get webhook URL from settings (database)
     const settings = await getSettings(teamId)
     const webhookUrl = settings.webhookUrl
     
-    // Prepare the response to send to the chatbot
     const chatbotPayload: SendMessageResponse = {
       leadId: lead.id,
       action,
@@ -40,7 +38,6 @@ export async function POST(
       phone: lead.phone,
     }
 
-    // Send POST request to n8n webhook
     let webhookSent = false
     if (webhookUrl) {
       try {
@@ -61,7 +58,6 @@ export async function POST(
       }
     }
 
-    // Update session status based on action
     let ratingReason = ""
     if (action === "approve") {
       ratingReason = "Approved by user"
@@ -77,7 +73,6 @@ export async function POST(
       ratingReason,
     })
 
-    // Update lead's lastContactedAt
     await updateLead(id, {
       lastContactedAt: new Date().toISOString(),
     })

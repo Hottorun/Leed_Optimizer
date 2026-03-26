@@ -1,18 +1,66 @@
-export type LeadStatus = "active" | "pending" | "approved" | "declined" | "unrelated" | "forwarded" | "completed"
-export type ContactPlatform = "whatsapp" | "email"
-export type ViewMode = "grid" | "list" | "squares"
-export type CustomerType = "all" | "first-time" | "returning" | "loyal"
-export type RatingFilter = "all" | 1 | 2 | 3 | 4 | 5
-export type GroupByOption = "none" | "rating" | "status" | "platform" | "customerType" | "date"
+export type LeadStatus = "pending" | "approved" | "declined" | "manual"
+export type LeadSource = "whatsapp" | "email"
+
+export interface LeadSession {
+  id: string
+  createdAt: string
+  teamsId: string
+  leadsId: string
+  status: "active" | "completed" | "cancelled"
+  currentStep: string
+  collectedData: CollectedData
+  needsMoreInfo: boolean
+  rating?: boolean
+  ratingReason?: string
+  forwardedAt?: string
+  updatedAt: string
+}
+
+export interface CollectedData {
+  name?: string
+  phone?: string
+  email?: string
+  location?: string
+  workType?: string
+  message?: string
+  company?: string
+  budget?: string
+  timeline?: string
+  contactPlatform?: string
+  [key: string]: string | undefined
+}
+
+export interface Lead {
+  id: string
+  name: string
+  phone: string
+  email: string
+  location?: string
+  workType?: string
+  conversationSummary?: string
+  approveMessage?: string
+  declineMessage?: string
+  rating?: number
+  ratingReason?: string
+  status: LeadStatus
+  source?: LeadSource
+  isLoyal?: boolean
+  createdAt: string
+  updatedAt: string
+  teamId?: string
+  leadCount?: number
+  autoApproved?: boolean
+  lastContactedAt?: string
+  session?: LeadSession
+}
+
 export type TeamRole = "owner" | "admin" | "member"
-export type SessionStatus = "active" | "completed" | "forwarded"
-export type FlowType = "qualification" | "support" | "contact"
 
 export interface Team {
   id: string
   name: string
-  ownerId?: string
-  inviteCode?: string
+  ownerId: string
+  inviteCode: string
   createdAt: string
   updatedAt: string
   industry?: string
@@ -31,88 +79,6 @@ export interface TeamMember {
   createdAt: string
 }
 
-export interface CollectedData {
-  name?: string
-  phone?: string
-  email?: string
-  location?: string
-  workType?: string
-  company?: string
-  budget?: string
-  timeline?: string
-  message?: string
-  [key: string]: string | undefined
-}
-
-export interface LeadSession {
-  id: string
-  createdAt: string
-  teamsId: string
-  leadsId: string
-  status: SessionStatus
-  currentStep: string
-  collectedData: CollectedData
-  needsMoreInfo: boolean
-  rating?: boolean
-  ratingReason?: string
-  forwardedAt?: string
-  updatedAt: string
-}
-
-export interface Lead {
-  id: string
-  name: string
-  phone: string
-  email: string
-  leadCount: number
-  isLoyal: boolean
-  autoApproved: boolean
-  lastContactedAt?: string
-  createdAt: string
-  updatedAt: string
-  teamId?: string
-  session?: LeadSession
-}
-
-export interface Message {
-  id: string
-  createdAt: string
-  teamsId: string
-  leadsId: string
-  leadsSessionsId?: string
-  direction: "incoming" | "outgoing"
-  text?: string
-}
-
-export interface TeamConfig {
-  id: string
-  createdAt: string
-  teamsId: string
-  flowType: FlowType
-  welcomeMessage?: string
-  aiSystemPrompt?: string
-  requiredFields: string[]
-  qualificationRules: QualificationRule[]
-  redirectLead: "email" | "phone" | "none"
-  toneOfVoice?: string
-  qualificationQuestions: QualificationQuestion[]
-}
-
-export interface QualificationRule {
-  field: string
-  operator: "equals" | "contains" | "greater_than" | "less_than"
-  value: string
-  action: "approve" | "decline" | "needs_review"
-}
-
-export interface QualificationQuestion {
-  id: string
-  field: string
-  question: string
-  required: boolean
-  options?: string[]
-}
-
 export interface AppSettings {
   autoDeleteDeclinedDays: number
   webhookUrl: string
@@ -127,6 +93,16 @@ export interface AppSettings {
   language: "de" | "en"
 }
 
+export interface Message {
+  id: string
+  createdAt: string
+  teamsId: string
+  leadsId: string
+  leadsSessionsId?: string
+  direction: "incoming" | "outgoing"
+  text?: string
+}
+
 export interface LeadStats {
   total: number
   pending: number
@@ -134,18 +110,24 @@ export interface LeadStats {
   declined: number
 }
 
+// Expected JSON structure from your backend
 export interface IncomingLead {
   name: string
   phone: string
   email: string
   location: string
   workType: string
-  message: string
+  conversationSummary: string
+  approveMessage: string
+  declineMessage: string
+  rating: number // 1-5
+  ratingReason: string // e.g., "Not in our area", "Perfect fit", etc.
 }
 
+// Response sent back to chatbot when user sends a message
 export interface SendMessageResponse {
   leadId: string
-  action: "approve" | "decline" | "unrelated"
+  action: "approve" | "decline"
   message: string
   phone: string
 }

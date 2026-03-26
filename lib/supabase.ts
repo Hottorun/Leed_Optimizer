@@ -12,7 +12,6 @@ function getSupabase(): SupabaseClient | null {
   if (supabase) return supabase
   
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  // Use service role key for server-side operations (bypasses RLS)
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
   if (!supabaseUrl || !supabaseKey) {
@@ -551,10 +550,6 @@ function mapDbMessageToMessage(row: {
   }
 }
 
-// =====================================================
-// TEAM FUNCTIONS
-// =====================================================
-
 export async function getTeamById(teamId: string): Promise<Team | null> {
   const client = getSupabase()
   
@@ -594,7 +589,6 @@ export async function getTeamByUserId(userId: string): Promise<Team | null> {
     return null
   }
 
-  // First get the user's team_id
   const { data: userData, error: userError } = await client
     .from("users")
     .select("team_id")
@@ -634,7 +628,6 @@ export async function createTeam(name: string, ownerId: string): Promise<Team | 
 
   const inviteCode = generateInviteCode()
 
-  // Create the team
   const { data: teamData, error: teamError } = await client
     .from("teams")
     .insert({ name, owner_id: ownerId, invite_code: inviteCode })
@@ -646,13 +639,11 @@ export async function createTeam(name: string, ownerId: string): Promise<Team | 
     return null
   }
 
-  // Update the owner to be part of this team
   await client
     .from("users")
     .update({ team_id: teamData.id, team_role: "owner" })
     .eq("id", ownerId)
 
-  // Create default settings for this team
   await client
     .from("settings")
     .insert({
@@ -802,7 +793,6 @@ export async function removeTeamMember(memberId: string): Promise<boolean> {
     return false
   }
 
-  // Remove the user's team association
   const { error } = await client
     .from("users")
     .update({ team_id: null, team_role: null })
@@ -826,7 +816,6 @@ export async function transferTeamOwnership(
     return false
   }
 
-  // Update the new owner to be owner
   const { error: newOwnerError } = await client
     .from("users")
     .update({ team_role: "owner" })
@@ -837,7 +826,6 @@ export async function transferTeamOwnership(
     return false
   }
 
-  // Update old owner to be admin
   const { data: currentOwner } = await client
     .from("teams")
     .select("owner_id")
@@ -851,7 +839,6 @@ export async function transferTeamOwnership(
       .eq("id", currentOwner.owner_id)
   }
 
-  // Update team owner_id
   await client
     .from("teams")
     .update({ owner_id: newOwnerId })
