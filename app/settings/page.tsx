@@ -83,7 +83,7 @@ export default function Settings() {
     <ThemeBackground className="p-6 space-y-6">
       <div className="flex items-center gap-4">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/dashboard")}
           className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

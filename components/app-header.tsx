@@ -22,8 +22,14 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [uiStyle, setUIStyle] = useState<"colored" | "minimal">("colored")
   const notificationRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const savedStyle = (localStorage.getItem("uiStyle") || "colored") as "colored" | "minimal"
+    setUIStyle(savedStyle)
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -72,7 +78,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
             onClick={handleLogoClick}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800">
+            <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg", uiStyle === "minimal" ? "bg-slate-800" : "bg-slate-800")}>
               {isLoading ? (
                 <Loader2 className="h-5 w-5 text-white animate-spin" />
               ) : (
@@ -89,7 +95,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
                 onClick={() => router.push(item.path)}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer ${
                   getActivePage() === item.name 
-                    ? "bg-slate-100 text-slate-800" 
+                    ? uiStyle === "minimal" ? "bg-slate-400 text-slate-800" : "bg-slate-100 text-slate-800" 
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                 }`}
               >
@@ -130,7 +136,10 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
                   ))}
                 </div>
                 <div className="px-4 py-2 border-t border-slate-100 bg-slate-50">
-                  <button className="text-sm text-slate-600 hover:text-slate-800 font-medium">
+                  <button 
+                    onClick={() => router.push("/settings/notifications")}
+                    className="text-sm text-slate-600 hover:text-slate-800 font-medium"
+                  >
                     View all notifications
                   </button>
                 </div>
@@ -143,9 +152,9 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
           <div className="relative" ref={userMenuRef}>
             <button 
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors"
+              className={cn("flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors", uiStyle === "minimal" ? "hover:bg-slate-200" : "hover:bg-blue-50")}
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700">
+              <div className={cn("flex h-8 w-8 items-center justify-center rounded-full", uiStyle === "minimal" ? "bg-gradient-to-br from-slate-700 to-slate-800" : "bg-gradient-to-br from-blue-500 to-blue-700")}>
                 <User className="h-4 w-4 text-white" />
               </div>
               <span className="hidden sm:block text-sm font-medium text-slate-600">{user?.name || "User"}</span>

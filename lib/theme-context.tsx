@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
-type Theme = "blue" | "emerald" | "purple" | "rose" | "amber" | "minimal"
+type Theme = "blue" | "emerald" | "purple" | "rose" | "amber" | "indigo"
 type Mode = "light" | "dark"
 type UIStyle = "colorful" | "minimal"
 
@@ -18,21 +18,21 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 const themeColors: Record<Theme, { primary: string; primaryHover: string; bg: string; bgHover: string }> = {
-  blue: { primary: "bg-blue-600", primaryHover: "bg-blue-700", bg: "bg-blue-50", bgHover: "bg-blue-100" },
-  emerald: { primary: "bg-emerald-600", primaryHover: "bg-emerald-700", bg: "bg-emerald-50", bgHover: "bg-emerald-100" },
+  blue: { primary: "bg-blue-700", primaryHover: "bg-blue-800", bg: "bg-blue-50", bgHover: "bg-blue-100" },
+  indigo: { primary: "bg-indigo-600", primaryHover: "bg-indigo-700", bg: "bg-indigo-50", bgHover: "bg-indigo-100" },
+  emerald: { primary: "bg-emerald-700", primaryHover: "bg-emerald-800", bg: "bg-emerald-50", bgHover: "bg-emerald-100" },
   purple: { primary: "bg-purple-600", primaryHover: "bg-purple-700", bg: "bg-purple-50", bgHover: "bg-purple-100" },
   rose: { primary: "bg-rose-600", primaryHover: "bg-rose-700", bg: "bg-rose-50", bgHover: "bg-rose-100" },
   amber: { primary: "bg-amber-600", primaryHover: "bg-amber-700", bg: "bg-amber-50", bgHover: "bg-amber-100" },
-  minimal: { primary: "bg-slate-600", primaryHover: "bg-slate-700", bg: "bg-slate-100", bgHover: "bg-slate-200" },
 }
 
 const darkThemeColors: Record<Theme, { primary: string; primaryHover: string; bg: string; bgHover: string }> = {
-  blue: { primary: "bg-blue-500", primaryHover: "bg-blue-400", bg: "bg-blue-900/30", bgHover: "bg-blue-900/50" },
+  blue: { primary: "bg-indigo-500", primaryHover: "bg-indigo-400", bg: "bg-indigo-900/30", bgHover: "bg-indigo-900/50" },
+  indigo: { primary: "bg-indigo-500", primaryHover: "bg-indigo-400", bg: "bg-indigo-900/30", bgHover: "bg-indigo-900/50" },
   emerald: { primary: "bg-emerald-500", primaryHover: "bg-emerald-400", bg: "bg-emerald-900/30", bgHover: "bg-emerald-900/50" },
   purple: { primary: "bg-purple-500", primaryHover: "bg-purple-400", bg: "bg-purple-900/30", bgHover: "bg-purple-900/50" },
   rose: { primary: "bg-rose-500", primaryHover: "bg-rose-400", bg: "bg-rose-900/30", bgHover: "bg-rose-900/50" },
   amber: { primary: "bg-amber-500", primaryHover: "bg-amber-400", bg: "bg-amber-900/30", bgHover: "bg-amber-900/50" },
-  minimal: { primary: "bg-slate-500", primaryHover: "bg-slate-400", bg: "bg-slate-800/30", bgHover: "bg-slate-800/50" },
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

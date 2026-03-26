@@ -19,9 +19,12 @@ export default function DashboardPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [leads, setLeads] = useState<Lead[]>([])
   const [mounted, setMounted] = useState(false)
+  const [uiStyle, setUIStyle] = useState<"colored" | "minimal">("colored")
 
   useEffect(() => {
     setMounted(true)
+    const savedStyle = (localStorage.getItem("uiStyle") || "colored") as "colored" | "minimal"
+    setUIStyle(savedStyle)
   }, [])
 
   useEffect(() => {
@@ -128,7 +131,7 @@ export default function DashboardPage() {
     >
       <div className="flex items-center gap-3">
         {index !== undefined && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white text-sm font-bold">
+          <div className={cn("flex h-8 w-8 items-center justify-center rounded-full text-white text-sm font-bold", uiStyle === "minimal" ? "bg-gradient-to-br from-slate-700 to-slate-800" : "bg-gradient-to-br from-blue-500 to-purple-500")}>
             {index + 1}
           </div>
         )}
@@ -158,22 +161,26 @@ export default function DashboardPage() {
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className={cn(
           "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border",
-          getRating(lead) >= 4 
-            ? "border-indigo-200 bg-indigo-50 text-indigo-600" 
-            : getRating(lead) >= 3 
-              ? "border-blue-200 bg-blue-50 text-blue-600"
-              : "border-slate-200 bg-slate-50 text-slate-500"
+          uiStyle === "minimal"
+            ? "border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600"
+            : getRating(lead) >= 4 
+              ? "border-indigo-200 bg-indigo-50 text-indigo-600" 
+              : getRating(lead) >= 3 
+                ? "border-blue-200 bg-blue-50 text-blue-600"
+                : "border-slate-200 bg-slate-50 text-slate-500"
         )}>
-          <Sparkles className="h-3 w-3" />
+          <Sparkles className={cn("h-3 w-3", uiStyle === "minimal" ? "text-indigo-500" : "")} />
           {getRating(lead) >= 4 ? "High priority" : getRating(lead) >= 3 ? "Medium priority" : "Nurture"}
         </span>
         <span className={cn(
           "text-xs font-medium",
-          getRating(lead) >= 4 
-            ? "text-indigo-500" 
-            : getRating(lead) >= 3 
-              ? "text-blue-500"
-              : "text-slate-400"
+          uiStyle === "minimal"
+            ? "text-indigo-600"
+            : getRating(lead) >= 4 
+              ? "text-indigo-500" 
+              : getRating(lead) >= 3 
+                ? "text-blue-500"
+                : "text-slate-400"
         )}>{getAiCta(lead)}</span>
       </div>
     </button>
@@ -185,9 +192,9 @@ export default function DashboardPage() {
       <ThemeBackground>
         <div className="p-6 space-y-8 max-w-6xl mx-auto">
           <div className="text-center py-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-200 mb-4">
-              <Sparkles className="h-4 w-4 text-indigo-500" />
-              <span className="text-sm font-medium text-indigo-600">AI-Powered Lead Management</span>
+            <div className={cn("inline-flex items-center gap-2 px-4 py-2 rounded-full border mb-4", uiStyle === "minimal" ? "bg-gradient-to-r from-indigo-100 to-purple-100 border-indigo-200" : "bg-indigo-50 border-indigo-200")}>
+              <Sparkles className={cn("h-4 w-4", uiStyle === "minimal" ? "text-indigo-500" : "text-indigo-500")} />
+              <span className={cn("text-sm font-medium", uiStyle === "minimal" ? "text-indigo-600" : "text-indigo-600")}>AI-Powered Lead Management</span>
             </div>
             <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100">
               Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 18 ? "Afternoon" : "Evening"},{" "}
@@ -199,8 +206,8 @@ export default function DashboardPage() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
             <div className="flex flex-col md:flex-row">
               <div className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1">
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-700">
-                  <Target className="h-6 w-6 text-slate-600 dark:text-slate-300" />
+                <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
+                  <Target className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
                 </div>
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Total Leads</p>
@@ -208,8 +215,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1">
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-700">
-                  <TrendingUp className="h-6 w-6 text-slate-600 dark:text-slate-300" />
+                <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
+                  <TrendingUp className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
                 </div>
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">New Today</p>
@@ -217,8 +224,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1">
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-700">
-                  <Clock className="h-6 w-6 text-slate-600 dark:text-slate-300" />
+                <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
+                  <Clock className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
                 </div>
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Active Sessions</p>
@@ -226,8 +233,8 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="flex items-center gap-4 px-6 py-5 flex-1">
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-700">
-                  <Heart className="h-6 w-6 text-slate-600 dark:text-slate-300" />
+                <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
+                  <Heart className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
                 </div>
                 <div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Priority</p>
@@ -239,18 +246,18 @@ export default function DashboardPage() {
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="p-5 border-b border-slate-100 dark:border-slate-700 bg-indigo-50/30">
+              <div className={cn("p-5 border-b border-slate-100 dark:border-slate-700", uiStyle === "minimal" ? "bg-gradient-to-r from-indigo-50 to-purple-50" : "bg-indigo-50/30")}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-indigo-100">
-                      <Zap className="h-5 w-5 text-indigo-600" />
+                    <div className={cn("p-2 rounded-lg", uiStyle === "minimal" ? "bg-gradient-to-br from-indigo-500 to-purple-500" : "bg-indigo-100")}>
+                      <Zap className={cn("h-5 w-5", uiStyle === "minimal" ? "text-white" : "text-indigo-600")} />
                     </div>
                     <div>
                       <h2 className="font-semibold text-slate-800 dark:text-slate-100">Top 3 Leads</h2>
                       <p className="text-sm text-slate-500">Highest rated, active sessions</p>
                     </div>
                   </div>
-                  <Link href="/leads" className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                  <Link href="/leads" className={cn("text-sm flex items-center gap-1", uiStyle === "minimal" ? "text-indigo-600 hover:text-indigo-700" : "text-indigo-600 hover:text-indigo-700")}>
                     View All <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
@@ -268,18 +275,18 @@ export default function DashboardPage() {
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="p-5 border-b border-slate-100 dark:border-slate-700 bg-amber-50/30">
+              <div className={cn("p-5 border-b border-slate-100 dark:border-slate-700", uiStyle === "minimal" ? "bg-slate-100" : "bg-amber-50/30")}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-amber-100">
-                      <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <div className={cn("p-2 rounded-lg", uiStyle === "minimal" ? "bg-slate-300" : "bg-amber-100")}>
+                      <AlertCircle className={cn("h-5 w-5", uiStyle === "minimal" ? "text-slate-700" : "text-amber-600")} />
                     </div>
                     <div>
                       <h2 className="font-semibold text-slate-800 dark:text-slate-100">Needs Attention</h2>
                       <p className="text-sm text-slate-500">Overdue or high-value leads</p>
                     </div>
                   </div>
-                  <Link href="/leads" className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1">
+                  <Link href="/leads" className={cn("text-sm flex items-center gap-1", uiStyle === "minimal" ? "text-slate-700 hover:text-slate-800" : "text-amber-600 hover:text-amber-700")}>
                     View All <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>

@@ -2,53 +2,49 @@
 
 import { useState, useEffect } from "react"
 
-type Theme = "blue" | "emerald" | "purple" | "rose" | "amber" | "minimal"
-export type BackgroundStyle = "gradient" | "monotone" | "image"
+type UIStyle = "colored" | "minimal"
+export type BackgroundStyle = "gradient" | "monotone"
 
 interface ThemeGradient {
   from: string
   to: string
 }
 
-const themeColors: Record<Theme, string> = {
+const themeColors: Record<string, string> = {
   blue: "#2563eb",
   emerald: "#059669",
   purple: "#7c3aed",
   rose: "#e11d48",
   amber: "#ea580c",
-  minimal: "#64748b",
 }
 
-const themeLightColors: Record<Theme, string> = {
+const themeLightColors: Record<string, string> = {
   blue: "#e2e8f0",
   emerald: "#ccfbf1",
   purple: "#e0e7ff",
   rose: "#f5f5f4",
   amber: "#fef3c7",
-  minimal: "#e2e8f0",
 }
 
-const themeGradients: Record<Theme, ThemeGradient> = {
+const themeGradients: Record<string, ThemeGradient> = {
   blue: { from: "from-blue-100", to: "to-blue-200" },
   emerald: { from: "from-emerald-100", to: "to-emerald-200" },
   purple: { from: "from-violet-100", to: "to-violet-200" },
   rose: { from: "from-rose-100", to: "to-rose-200" },
   amber: { from: "from-orange-100", to: "to-orange-200" },
-  minimal: { from: "from-slate-200", to: "to-slate-300" },
 }
 
-const gradientColors: Record<Theme, { from: string; to: string }> = {
+const gradientColors: Record<string, { from: string; to: string }> = {
   blue: { from: "#dbeafe", to: "#e0e7ff" },
   emerald: { from: "#ccfbf1", to: "#dcfce7" },
   purple: { from: "#e0e7ff", to: "#f3e8ff" },
   rose: { from: "#fef2f2", to: "#fef3c7" },
   amber: { from: "#fef3c7", to: "#dbeafe" },
-  minimal: { from: "#e2e8f0", to: "#cbd5e1" },
 }
 
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "blue"
-  return (localStorage.getItem("theme") as Theme) || "blue"
+function getInitialUIStyle(): UIStyle {
+  if (typeof window === "undefined") return "colored"
+  return (localStorage.getItem("uiStyle") as UIStyle) || "colored"
 }
 
 function getInitialBackgroundStyle(): BackgroundStyle {
@@ -63,24 +59,24 @@ function getInitialDarkMode(): boolean {
 
 export function useThemeGradient() {
   const [gradient] = useState<ThemeGradient>(themeGradients.blue)
-  const [currentTheme, setCurrentTheme] = useState<Theme>(getInitialTheme)
+  const [currentUIStyle, setCurrentUIStyle] = useState<UIStyle>(getInitialUIStyle)
   const [backgroundStyle, setBackgroundStyle] = useState<BackgroundStyle>(getInitialBackgroundStyle)
 
   useEffect(() => {
-    const savedTheme = (localStorage.getItem("theme") || "blue") as Theme
-    const savedStyle = localStorage.getItem("backgroundStyle") as BackgroundStyle | null
+    const savedStyle = (localStorage.getItem("uiStyle") || "colored") as UIStyle
+    const savedBgStyle = localStorage.getItem("backgroundStyle") as BackgroundStyle | null
     
-    setCurrentTheme(savedTheme)
-    if (savedStyle) {
-      setBackgroundStyle(savedStyle)
+    setCurrentUIStyle(savedStyle)
+    if (savedBgStyle) {
+      setBackgroundStyle(savedBgStyle)
     }
 
     const handleStorageChange = () => {
-      const newTheme = (localStorage.getItem("theme") || "blue") as Theme
-      const newStyle = localStorage.getItem("backgroundStyle") as BackgroundStyle | null
-      setCurrentTheme(newTheme)
-      if (newStyle) {
-        setBackgroundStyle(newStyle)
+      const newStyle = (localStorage.getItem("uiStyle") || "colored") as UIStyle
+      const newBgStyle = localStorage.getItem("backgroundStyle") as BackgroundStyle | null
+      setCurrentUIStyle(newStyle)
+      if (newBgStyle) {
+        setBackgroundStyle(newBgStyle)
       }
     }
 
@@ -93,34 +89,21 @@ export function useThemeGradient() {
     localStorage.setItem("backgroundStyle", style)
   }
 
-  return { gradient, currentTheme, backgroundStyle, saveBackgroundStyle, themeColors, themeLightColors, gradientColors }
+  return { gradient, currentUIStyle, backgroundStyle, saveBackgroundStyle, themeColors, themeLightColors, gradientColors }
 }
 
 export function ThemeBackground({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  const { currentTheme, backgroundStyle, themeLightColors, gradientColors } = useThemeGradient()
+  const { currentUIStyle } = useThemeGradient()
   const isDark = getInitialDarkMode()
 
-  const theme = currentTheme && themeGradients[currentTheme] ? currentTheme : "blue"
-  
   const getBackgroundStyle = (): React.CSSProperties => {
     if (isDark) return { background: "#0f172a" }
     
-    if (theme === "minimal") {
-      return { background: "#e2e8f0" }
+    if (currentUIStyle === "minimal") {
+      return { background: "#cbd5e1" }
     }
 
-    const colors = gradientColors[theme]
-    if (!colors) return { background: "#f8fafc" }
-
-    switch (backgroundStyle) {
-      case "monotone":
-        return { background: themeLightColors[theme] || "#f8fafc" }
-      case "image":
-        return { background: "url('/bg-image.jpg') center/cover no-repeat" }
-      case "gradient":
-      default:
-        return { background: `linear-gradient(to bottom right, ${colors.from}, ${colors.to})` }
-    }
+    return { background: "linear-gradient(to bottom right, #dbeafe, #e0e7ff)" }
   }
 
   return (

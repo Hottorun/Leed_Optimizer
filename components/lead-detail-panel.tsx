@@ -34,16 +34,12 @@ interface LeadDetailPanelProps {
   onSendMessage: (action: "approve" | "decline", message: string) => Promise<void>
 }
 
-const statusConfig: Record<LeadStatus, { label: string; dotColor: string; textColor: string }> = {
+const statusConfig: Record<string, { label: string; dotColor: string; textColor: string }> = {
   pending: { label: "Pending", dotColor: "bg-amber-500", textColor: "text-amber-600" },
   approved: { label: "Approved", dotColor: "bg-blue-500", textColor: "text-blue-600" },
   declined: { label: "Declined", dotColor: "bg-slate-400", textColor: "text-slate-500" },
   manual: { label: "Manual Review", dotColor: "bg-purple-500", textColor: "text-purple-600" },
-}
-
-const sourceConfig: Record<LeadSource, { label: string; color: string; iconColor: string }> = {
-  whatsapp: { label: "WhatsApp", color: "bg-emerald-50 text-emerald-700", iconColor: "text-emerald-500" },
-  email: { label: "Email", color: "bg-blue-50 text-blue-700", iconColor: "text-blue-500" },
+  active: { label: "Active", dotColor: "bg-green-500", textColor: "text-green-600" },
 }
 
 function formatDate(dateString: string): string {
@@ -56,10 +52,27 @@ function formatDate(dateString: string): string {
   })
 }
 
+function getLeadSource(lead: Lead): LeadSource {
+  if (lead.phone) return "whatsapp"
+  return "email"
+}
+
+function getLeadRating(lead: Lead): number {
+  return lead.session?.rating ?? lead.rating ?? 0
+}
+
+function getLeadStatus(lead: Lead): string {
+  return lead.session?.status || lead.status || "pending"
+}
+
 export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPanelProps) {
-  const [approveMessage, setApproveMessage] = useState(lead.approveMessage)
-  const [declineMessage, setDeclineMessage] = useState(lead.declineMessage)
+  const [approveMessage, setApproveMessage] = useState(lead.approveMessage || "")
+  const [declineMessage, setDeclineMessage] = useState(lead.declineMessage || "")
   const [isSending, setIsSending] = useState<"approve" | "decline" | null>(null)
+
+  const status = getLeadStatus(lead)
+  const rating = getLeadRating(lead)
+  const source = getLeadSource(lead)
 
   const handleSend = async (action: "approve" | "decline") => {
     setIsSending(action)
@@ -71,9 +84,11 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
     }
   }
 
-  const isActionable = lead.status === "pending" || lead.status === "manual"
-  const status = statusConfig[lead.status]
-  const source = sourceConfig[lead.source]
+  const isActionable = status === "pending" || status === "manual"
+  const statusInfo = statusConfig[status] || { label: status, dotColor: "bg-slate-400", textColor: "text-slate-500" }
+  const sourceInfo = source === "whatsapp" 
+    ? { label: "WhatsApp", color: "bg-emerald-50 text-emerald-700" }
+    : { label: "Email", color: "bg-blue-50 text-blue-700" }
 
   return (
     <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-xl">
@@ -81,8 +96,8 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-slate-800">Lead Details</h2>
           <div className="flex items-center gap-1.5">
-            <span className={cn("h-2 w-2 rounded-full", status.dotColor)} />
-            <span className={cn("text-xs font-medium", status.textColor)}>{status.label}</span>
+            <span className={cn("h-2 w-2 rounded-full", statusInfo.dotColor)} />
+            <span className={cn("text-xs font-medium", statusInfo.textColor)}>{statusInfo.label}</span>
           </div>
         </div>
         <Button 
@@ -108,13 +123,13 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="text-xl font-semibold text-slate-800">{lead.name}</h3>
-              <span className={cn("text-xs px-2 py-0.5 rounded-full", source.color)}>
-                {source.label}
+              <span className={cn("text-xs px-2 py-0.5 rounded-full", sourceInfo.color)}>
+                {sourceInfo.label}
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-slate-500 mt-1">
               <Briefcase className="h-4 w-4" />
-              <span>{lead.workType}</span>
+              <span>{lead.session?.collectedData?.workType || lead.workType || "Not specified"}</span>
             </div>
           </div>
         </div>
@@ -127,63 +142,91 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
                   key={i}
                   className={cn(
                     "h-4 w-4",
-                    i < lead.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"
+                    i < rating ? "text-amber-400 fill-amber-400" : "text-slate-200"
                   )}
                 />
               ))}
             </div>
-            <span className="text-sm font-semibold text-slate-700">{lead.rating}/5</span>
+            <span className="text-sm font-semibold text-slate-700">{rating}/5</span>
           </div>
           <div className="h-4 w-px bg-indigo-200" />
           <div className="flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-            <p className="text-sm text-indigo-600">{lead.ratingReason}</p>
+            <p className="text-sm text-indigo-600">{lead.session?.aiRecommendation || lead.ratingReason || "No recommendation yet"}</p>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <h4 className="text-sm font-semibold text-slate-700 mb-3">AI Insights</h4>
+          <div className="grid grid-cols-3 gap-3">
+            <div className={cn(
+              "rounded-xl p-4 text-center",
+              rating >= 4 ? "bg-green-50 border border-green-200" :
+              rating >= 3 ? "bg-blue-50 border border-blue-200" :
+              "bg-slate-50 border border-slate-200"
+            )}>
+              <p className="text-xs text-slate-500 mb-1">Conversion</p>
+              <p className={cn(
+                "text-lg font-bold",
+                rating >= 4 ? "text-green-600" : rating >= 3 ? "text-blue-600" : "text-slate-500"
+              )}>
+                {rating >= 4 ? "High" : rating >= 3 ? "Medium" : "Low"}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {rating >= 4 ? "85% chance" : rating >= 3 ? "50% chance" : "20% chance"}
+              </p>
+            </div>
+            <div className="rounded-xl p-4 text-center bg-purple-50 border border-purple-200">
+              <p className="text-xs text-slate-500 mb-1">Deal Value</p>
+              <p className="text-lg font-bold text-purple-600">
+                {rating >= 4 ? "$5k+" : rating >= 3 ? "$1k-5k" : "<$1k"}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {rating >= 4 ? "Enterprise" : rating >= 3 ? "SMB" : "Starter"}
+              </p>
+            </div>
+            <div className={cn(
+              "rounded-xl p-4 text-center",
+              rating >= 4 ? "bg-red-50 border border-red-200" :
+              rating >= 3 ? "bg-amber-50 border border-amber-200" :
+              "bg-slate-50 border border-slate-200"
+            )}>
+              <p className="text-xs text-slate-500 mb-1">Urgency</p>
+              <p className={cn(
+                "text-lg font-bold",
+                rating >= 4 ? "text-red-600" : rating >= 3 ? "text-amber-600" : "text-slate-500"
+              )}>
+                {rating >= 4 ? "Hot" : rating >= 3 ? "Warm" : "Cold"}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {rating >= 4 ? "Act now" : rating >= 3 ? "This week" : "When ready"}
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="h-5 w-5 text-indigo-600" />
-            <h4 className="font-semibold text-indigo-700">AI Analysis</h4>
+            <h4 className="font-semibold text-indigo-700">AI Recommendation</h4>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex items-start gap-3">
               <div className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full shrink-0",
-                lead.rating >= 4 ? "bg-indigo-100" : lead.rating >= 3 ? "bg-blue-100" : "bg-slate-100"
+                rating >= 4 ? "bg-indigo-100" : rating >= 3 ? "bg-blue-100" : "bg-slate-100"
               )}>
                 <Target className={cn(
                   "h-4 w-4",
-                  lead.rating >= 4 ? "text-indigo-600" : lead.rating >= 3 ? "text-blue-600" : "text-slate-500"
+                  rating >= 4 ? "text-indigo-600" : rating >= 3 ? "text-blue-600" : "text-slate-500"
                 )} />
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-700">Priority Level</p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {lead.rating >= 4 ? "High priority - Immediate attention recommended" 
-                    : lead.rating >= 3 ? "Medium priority - Follow up within 48 hours"
+                  {rating >= 4 ? "High priority - Immediate attention recommended" 
+                    : rating >= 3 ? "Medium priority - Follow up within 48 hours"
                     : "Low priority - Add to nurture sequence"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full shrink-0",
-                lead.status === "manual" ? "bg-violet-100" : "bg-emerald-100"
-              )}>
-                {lead.status === "manual" ? (
-                  <AlertCircle className="h-4 w-4 text-violet-600" />
-                ) : (
-                  <Check className="h-4 w-4 text-emerald-600" />
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-700">Status</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {lead.status === "manual" ? "Requires human review before action" 
-                    : lead.status === "pending" ? "Ready for automated processing"
-                    : lead.status === "approved" ? "Approved and ready for follow-up"
-                    : "Declined - May be reconsidered later"}
                 </p>
               </div>
             </div>
@@ -194,8 +237,8 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
               <div>
                 <p className="text-sm font-medium text-slate-700">Conversion Potential</p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {lead.rating >= 4 ? "High conversion likelihood - Strong interest signals" 
-                    : lead.rating >= 3 ? "Moderate conversion potential - Standard follow-up"
+                  {rating >= 4 ? "High conversion likelihood - Strong interest signals" 
+                    : rating >= 3 ? "Moderate conversion potential - Standard follow-up"
                     : "Lower conversion probability - Consider automated nurture"}
                 </p>
               </div>
@@ -207,9 +250,9 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
               <div>
                 <p className="text-sm font-medium text-slate-700">Recommended Action</p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {lead.rating >= 4 ? "Contact within 24 hours for best results" 
-                    : lead.status === "manual" ? "Review and categorize before proceeding"
-                    : lead.rating >= 3 ? "Schedule follow-up call within 48 hours"
+                  {rating >= 4 ? "Contact within 24 hours for best results" 
+                    : status === "manual" ? "Review and categorize before proceeding"
+                    : rating >= 3 ? "Schedule follow-up call within 48 hours"
                     : "Send welcome email sequence and periodic updates"}
                 </p>
               </div>
@@ -242,22 +285,24 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
             </div>
             <div>
               <p className="text-xs text-slate-500">Location</p>
-              <p className="font-medium text-slate-800">{lead.location}</p>
+              <p className="font-medium text-slate-800">{lead.session?.collectedData?.location || lead.location || "Not specified"}</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
-            <MessageSquare className="h-4 w-4" />
-            Conversation Summary
+        {lead.conversationSummary && (
+          <div className="mt-6">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+              <MessageSquare className="h-4 w-4" />
+              Conversation Summary
+            </div>
+            <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 leading-relaxed">
+              {lead.conversationSummary}
+            </div>
           </div>
-          <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 leading-relaxed">
-            {lead.conversationSummary}
-          </div>
-        </div>
+        )}
 
-        {lead.status === "manual" && (
+        {status === "manual" && (
           <>
             <div className="mt-6">
               <div className="flex items-center justify-between">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { Clock, CheckCircle, XCircle, Star, TrendingUp, Users, MessageCircle, Mail, Hand, Download, FileText, Calendar } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from "recharts"
 import pdfMake from "pdfmake/build/pdfmake"
@@ -15,20 +15,34 @@ interface AnalyticsProps {
 export function Analytics({ leads }: AnalyticsProps) {
   const [timeRange, setTimeRange] = useState<"week" | "month" | "all">("week")
   const [downloading, setDownloading] = useState(false)
+  const [uiStyle, setUIStyle] = useState<"colored" | "minimal">("colored")
   const growthChartRef = useRef<HTMLDivElement>(null)
   const sourceChartRef = useRef<HTMLDivElement>(null)
   const statusChartRef = useRef<HTMLDivElement>(null)
 
-  const pending = leads.filter(l => l.status === "pending")
-  const approved = leads.filter(l => l.status === "approved")
-  const declined = leads.filter(l => l.status === "declined")
-  const manual = leads.filter(l => l.status === "manual")
+  useEffect(() => {
+    const savedStyle = (localStorage.getItem("uiStyle") || "colored") as "colored" | "minimal"
+    setUIStyle(savedStyle)
+  }, [])
 
-  const whatsappLeads = leads.filter(l => l.source === "whatsapp")
-  const emailLeads = leads.filter(l => l.source === "email")
+  const getLeadStatus = (lead: Lead) => lead.session?.status || lead.status || "pending"
+  const getLeadRating = (lead: Lead) => lead.session?.rating ?? lead.rating ?? 0
+  const getLeadSource = (lead: Lead) => {
+    if (lead.phone) return "whatsapp"
+    if (lead.email) return "email"
+    return "manual"
+  }
+
+  const pending = leads.filter(l => getLeadStatus(l) === "pending")
+  const approved = leads.filter(l => getLeadStatus(l) === "approved")
+  const declined = leads.filter(l => getLeadStatus(l) === "declined")
+  const manual = leads.filter(l => getLeadStatus(l) === "manual")
+
+  const whatsappLeads = leads.filter(l => getLeadSource(l) === "whatsapp")
+  const emailLeads = leads.filter(l => getLeadSource(l) === "email")
 
   const avgRating = leads.length > 0 
-    ? (leads.reduce((sum, l) => sum + l.rating, 0) / leads.length).toFixed(1)
+    ? (leads.reduce((sum, l) => sum + getLeadRating(l), 0) / leads.length).toFixed(1)
     : "0"
 
   const approvalRate = leads.length > 0
@@ -36,26 +50,26 @@ export function Analytics({ leads }: AnalyticsProps) {
     : 0
 
   const statCards = [
-    { label: "Total Leads", value: leads.length, icon: Users, color: "bg-slate-600" },
-    { label: "Pending", value: pending.length, icon: Clock, color: "bg-slate-500" },
-    { label: "Approved", value: approved.length, icon: CheckCircle, color: "bg-slate-600" },
-    { label: "Declined", value: declined.length, icon: XCircle, color: "bg-slate-400" },
-    { label: "Avg Rating", value: avgRating, icon: Star, color: "bg-slate-500", suffix: "/5" },
-    { label: "Approval Rate", value: `${approvalRate}%`, icon: TrendingUp, color: "bg-slate-600" },
+    { label: "Total Leads", value: leads.length, icon: Users, coloredBg: "bg-blue-600", coloredIcon: "text-white", minimalBg: "bg-slate-600", minimalIcon: "text-white" },
+    { label: "Pending", value: pending.length, icon: Clock, coloredBg: "bg-amber-500", coloredIcon: "text-white", minimalBg: "bg-slate-500", minimalIcon: "text-white" },
+    { label: "Approved", value: approved.length, icon: CheckCircle, coloredBg: "bg-green-600", coloredIcon: "text-white", minimalBg: "bg-slate-600", minimalIcon: "text-white" },
+    { label: "Declined", value: declined.length, icon: XCircle, coloredBg: "bg-red-500", coloredIcon: "text-white", minimalBg: "bg-slate-400", minimalIcon: "text-white" },
+    { label: "Avg Rating", value: avgRating, icon: Star, coloredBg: "bg-purple-500", coloredIcon: "text-white", minimalBg: "bg-slate-500", minimalIcon: "text-white", suffix: "/5" },
+    { label: "Approval Rate", value: `${approvalRate}%`, icon: TrendingUp, coloredBg: "bg-indigo-600", coloredIcon: "text-white", minimalBg: "bg-slate-600", minimalIcon: "text-white" },
   ]
 
   const sourceData = [
-    { source: "WhatsApp", count: whatsappLeads.length, color: "bg-slate-500", icon: MessageCircle },
-    { source: "Email", count: emailLeads.length, color: "bg-slate-400", icon: Mail },
-    { source: "Manual", count: manual.length, color: "bg-slate-600", icon: Hand },
+    { source: "WhatsApp", count: whatsappLeads.length, coloredBg: "bg-green-500", minimalBg: "bg-slate-500", icon: MessageCircle },
+    { source: "Email", count: emailLeads.length, coloredBg: "bg-blue-500", minimalBg: "bg-slate-400", icon: Mail },
+    { source: "Manual", count: manual.length, coloredBg: "bg-purple-500", minimalBg: "bg-slate-600", icon: Hand },
   ]
 
   const ratingDistribution = [
-    { rating: 5, count: leads.filter(l => l.rating === 5).length, width: leads.length > 0 ? (leads.filter(l => l.rating === 5).length / leads.length) * 100 : 0 },
-    { rating: 4, count: leads.filter(l => l.rating === 4).length, width: leads.length > 0 ? (leads.filter(l => l.rating === 4).length / leads.length) * 100 : 0 },
-    { rating: 3, count: leads.filter(l => l.rating === 3).length, width: leads.length > 0 ? (leads.filter(l => l.rating === 3).length / leads.length) * 100 : 0 },
-    { rating: 2, count: leads.filter(l => l.rating === 2).length, width: leads.length > 0 ? (leads.filter(l => l.rating === 2).length / leads.length) * 100 : 0 },
-    { rating: 1, count: leads.filter(l => l.rating === 1).length, width: leads.length > 0 ? (leads.filter(l => l.rating === 1).length / leads.length) * 100 : 0 },
+    { rating: 5, count: leads.filter(l => getLeadRating(l) === 5).length, width: leads.length > 0 ? (leads.filter(l => getLeadRating(l) === 5).length / leads.length) * 100 : 0 },
+    { rating: 4, count: leads.filter(l => getLeadRating(l) === 4).length, width: leads.length > 0 ? (leads.filter(l => getLeadRating(l) === 4).length / leads.length) * 100 : 0 },
+    { rating: 3, count: leads.filter(l => getLeadRating(l) === 3).length, width: leads.length > 0 ? (leads.filter(l => getLeadRating(l) === 3).length / leads.length) * 100 : 0 },
+    { rating: 2, count: leads.filter(l => getLeadRating(l) === 2).length, width: leads.length > 0 ? (leads.filter(l => getLeadRating(l) === 2).length / leads.length) * 100 : 0 },
+    { rating: 1, count: leads.filter(l => getLeadRating(l) === 1).length, width: leads.length > 0 ? (leads.filter(l => getLeadRating(l) === 1).length / leads.length) * 100 : 0 },
   ]
 
   const growthData = useMemo(() => {
@@ -78,7 +92,7 @@ export function Analytics({ leads }: AnalyticsProps) {
       
       const cumulativeLeads = leads.filter(l => new Date(l.createdAt) <= date).length
       const cumulativeApproved = approved.filter(l => new Date(l.createdAt) <= date).length
-      const cumulativePending = leads.filter(l => new Date(l.createdAt) <= date && l.status === "pending").length
+      const cumulativePending = leads.filter(l => new Date(l.createdAt) <= date && getLeadStatus(l) === "pending").length
       
       data.push({
         date: dateStr,
@@ -243,7 +257,7 @@ export function Analytics({ leads }: AnalyticsProps) {
       content.push(
         { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
         { text: 'Recent Leads', style: 'sectionHeader' },
-        { ul: leads.slice(0, 10).map((lead, i) => `${i + 1}. ${lead.name} - ${lead.status} - ${lead.rating}/5 stars`), margin: [0, 10, 0, 0] }
+        { ul: leads.slice(0, 10).map((lead, i) => `${i + 1}. ${lead.name} - ${getLeadStatus(lead)} - ${getLeadRating(lead)}/5 stars`), margin: [0, 10, 0, 0] }
       )
 
       const docDefinition: any = {
@@ -314,7 +328,7 @@ export function Analytics({ leads }: AnalyticsProps) {
                 className={cn(
                   "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
                   timeRange === range
-                    ? "bg-blue-100 text-blue-700"
+                    ? uiStyle === "minimal" ? "bg-slate-600 text-white" : "bg-blue-100 text-blue-700"
                     : "text-slate-500 hover:bg-slate-50"
                 )}
               >
@@ -329,7 +343,7 @@ export function Analytics({ leads }: AnalyticsProps) {
               "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer",
               downloading
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                : "bg-blue-600 text-white hover:bg-blue-700"
+                : uiStyle === "minimal" ? "bg-slate-600 text-white hover:bg-slate-700" : "bg-blue-600 text-white hover:bg-blue-700"
             )}
           >
             {downloading ? (
@@ -353,8 +367,8 @@ export function Analytics({ leads }: AnalyticsProps) {
           return (
             <div key={stat.label} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3 mb-3">
-                <div className={`p-2 rounded-lg ${stat.color}`}>
-                  <Icon className="h-4 w-4 text-white" />
+                <div className={cn("p-2 rounded-lg", uiStyle === "minimal" ? stat.minimalBg : stat.coloredBg)}>
+                  <Icon className={cn("h-4 w-4", uiStyle === "minimal" ? stat.minimalIcon : stat.coloredIcon)} />
                 </div>
               </div>
               <p className="text-2xl font-bold text-slate-800">{stat.value}{stat.suffix}</p>
@@ -366,7 +380,7 @@ export function Analytics({ leads }: AnalyticsProps) {
 
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="h-5 w-5 text-blue-500" />
+          <TrendingUp className={cn("h-5 w-5", uiStyle === "minimal" ? "text-slate-600" : "text-blue-500")} />
           <h3 className="text-lg font-semibold text-slate-800">Lead Growth</h3>
         </div>
         <div className="h-72" ref={growthChartRef}>
@@ -374,12 +388,12 @@ export function Analytics({ leads }: AnalyticsProps) {
             <AreaChart data={growthData}>
               <defs>
                 <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  <stop offset="5%" stopColor={uiStyle === "minimal" ? "#64748b" : "#3b82f6"} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={uiStyle === "minimal" ? "#64748b" : "#3b82f6"} stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorApproved" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  <stop offset="5%" stopColor={uiStyle === "minimal" ? "#64748b" : "#10b981"} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={uiStyle === "minimal" ? "#64748b" : "#10b981"} stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -396,7 +410,7 @@ export function Analytics({ leads }: AnalyticsProps) {
               <Area
                 type="monotone"
                 dataKey="leads"
-                stroke="#3b82f6"
+                stroke={uiStyle === "minimal" ? "#64748b" : "#3b82f6"}
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorLeads)"
@@ -405,7 +419,7 @@ export function Analytics({ leads }: AnalyticsProps) {
               <Area
                 type="monotone"
                 dataKey="approved"
-                stroke="#10b981"
+                stroke={uiStyle === "minimal" ? "#64748b" : "#10b981"}
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorApproved)"
@@ -416,11 +430,11 @@ export function Analytics({ leads }: AnalyticsProps) {
         </div>
         <div className="flex items-center justify-center gap-6 mt-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <div className={cn("w-3 h-3 rounded-full", uiStyle === "minimal" ? "bg-slate-500" : "bg-blue-500")} />
             <span className="text-sm text-slate-600">Total Leads</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+            <div className={cn("w-3 h-3 rounded-full", uiStyle === "minimal" ? "bg-slate-500" : "bg-green-500")} />
             <span className="text-sm text-slate-600">Approved</span>
           </div>
         </div>
@@ -431,7 +445,7 @@ export function Analytics({ leads }: AnalyticsProps) {
           <h3 className="text-lg font-semibold text-slate-800 mb-4">Leads by Source</h3>
           <div className="h-64" ref={sourceChartRef}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sourceData.map(d => ({ name: d.source, value: d.count }))} layout="vertical">
+              <BarChart data={sourceData.map(d => ({ name: d.source, value: d.count, color: uiStyle === "minimal" ? "#64748b" : "#3b82f6" }))} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis type="number" stroke="#64748b" fontSize={12} />
                 <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={12} width={80} />
@@ -443,7 +457,7 @@ export function Analytics({ leads }: AnalyticsProps) {
                     boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)"
                   }}
                 />
-                <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill={uiStyle === "minimal" ? "#64748b" : "#3b82f6"} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -478,10 +492,10 @@ export function Analytics({ leads }: AnalyticsProps) {
               <PieChart>
                 <Pie
                   data={[
-                    { name: 'Approved', value: approved.length, color: '#3b82f6' },
-                    { name: 'Pending', value: pending.length, color: '#f59e0b' },
-                    { name: 'Manual', value: manual.length, color: '#8b5cf6' },
-                    { name: 'Declined', value: declined.length, color: '#64748b' },
+                    { name: 'Approved', value: approved.length, color: uiStyle === "minimal" ? '#64748b' : '#3b82f6' },
+                    { name: 'Pending', value: pending.length, color: uiStyle === "minimal" ? '#64748b' : '#f59e0b' },
+                    { name: 'Manual', value: manual.length, color: uiStyle === "minimal" ? '#64748b' : '#8b5cf6' },
+                    { name: 'Declined', value: declined.length, color: uiStyle === "minimal" ? '#64748b' : '#64748b' },
                   ]}
                   cx="50%"
                   cy="50%"
@@ -491,9 +505,9 @@ export function Analytics({ leads }: AnalyticsProps) {
                   dataKey="value"
                 >
                   {[
-                    { color: '#3b82f6' },
-                    { color: '#f59e0b' },
-                    { color: '#8b5cf6' },
+                    { color: uiStyle === "minimal" ? '#64748b' : '#3b82f6' },
+                    { color: uiStyle === "minimal" ? '#64748b' : '#f59e0b' },
+                    { color: uiStyle === "minimal" ? '#64748b' : '#8b5cf6' },
                     { color: '#64748b' },
                   ].map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -512,15 +526,15 @@ export function Analytics({ leads }: AnalyticsProps) {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500" />
+              <div className={cn("w-3 h-3 rounded-full", uiStyle === "minimal" ? "bg-slate-500" : "bg-blue-500")} />
               <span className="text-sm text-slate-600">Approved ({approved.length})</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-amber-500" />
+              <div className={cn("w-3 h-3 rounded-full", uiStyle === "minimal" ? "bg-slate-500" : "bg-amber-500")} />
               <span className="text-sm text-slate-600">Pending ({pending.length})</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-purple-500" />
+              <div className={cn("w-3 h-3 rounded-full", uiStyle === "minimal" ? "bg-slate-500" : "bg-purple-500")} />
               <span className="text-sm text-slate-600">Manual ({manual.length})</span>
             </div>
             <div className="flex items-center gap-2">
@@ -531,24 +545,27 @@ export function Analytics({ leads }: AnalyticsProps) {
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Recent Activity</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className={cn("h-5 w-5", uiStyle === "minimal" ? "text-slate-600" : "text-blue-500")} />
+            <h3 className="text-lg font-semibold text-slate-800">Recent Activity</h3>
+          </div>
           <div className="space-y-3">
             {leads.slice(0, 5).map((lead) => (
               <div key={lead.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                <div className={cn("flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold", uiStyle === "minimal" ? "bg-slate-200 text-slate-700" : "bg-blue-100 text-blue-700")}>
                   {lead.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate">{lead.name}</p>
                   <p className="text-xs text-slate-500">{lead.workType}</p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  lead.status === "approved" ? "bg-blue-100 text-blue-700" :
-                  lead.status === "pending" ? "bg-amber-100 text-amber-700" :
-                  lead.status === "manual" ? "bg-purple-100 text-purple-700" :
+                <span className={cn("text-xs px-2 py-1 rounded-full", uiStyle === "minimal" ? "bg-slate-200 text-slate-700" : 
+                  getLeadStatus(lead) === "approved" ? "bg-blue-100 text-blue-700" :
+                  getLeadStatus(lead) === "pending" ? "bg-amber-100 text-amber-700" :
+                  getLeadStatus(lead) === "manual" ? "bg-purple-100 text-purple-700" :
                   "bg-slate-100 text-slate-600"
-                }`}>
-                  {lead.status}
+                )}>
+                  {getLeadStatus(lead)}
                 </span>
               </div>
             ))}
