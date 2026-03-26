@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 
-type Theme = "blue" | "emerald" | "purple" | "rose" | "amber"
+type Theme = "blue" | "emerald" | "purple" | "rose" | "amber" | "minimal"
 export type BackgroundStyle = "gradient" | "monotone" | "image"
 
 interface ThemeGradient {
@@ -11,35 +11,39 @@ interface ThemeGradient {
 }
 
 const themeColors: Record<Theme, string> = {
-  blue: "#3b82f6",
-  emerald: "#10b981",
-  purple: "#8b5cf6",
-  rose: "#f43f5e",
-  amber: "#f59e0b",
+  blue: "#2563eb",
+  emerald: "#059669",
+  purple: "#7c3aed",
+  rose: "#e11d48",
+  amber: "#ea580c",
+  minimal: "#64748b",
 }
 
 const themeLightColors: Record<Theme, string> = {
-  blue: "#eff6ff",
-  emerald: "#ecfdf5",
-  purple: "#faf5ff",
-  rose: "#fff1f2",
-  amber: "#fffbeb",
+  blue: "#e2e8f0",
+  emerald: "#ccfbf1",
+  purple: "#e0e7ff",
+  rose: "#f5f5f4",
+  amber: "#fef3c7",
+  minimal: "#e2e8f0",
 }
 
 const themeGradients: Record<Theme, ThemeGradient> = {
-  blue: { from: "from-blue-50", to: "to-blue-100/50" },
-  emerald: { from: "from-emerald-50", to: "to-emerald-100/50" },
-  purple: { from: "from-purple-50", to: "to-purple-100/50" },
-  rose: { from: "from-rose-50", to: "to-rose-100/50" },
-  amber: { from: "from-amber-50", to: "to-amber-100/50" },
+  blue: { from: "from-blue-100", to: "to-blue-200" },
+  emerald: { from: "from-emerald-100", to: "to-emerald-200" },
+  purple: { from: "from-violet-100", to: "to-violet-200" },
+  rose: { from: "from-rose-100", to: "to-rose-200" },
+  amber: { from: "from-orange-100", to: "to-orange-200" },
+  minimal: { from: "from-slate-200", to: "to-slate-300" },
 }
 
 const gradientColors: Record<Theme, { from: string; to: string }> = {
-  blue: { from: "#eff6ff", to: "#dbeafe" },
-  emerald: { from: "#ecfdf5", to: "#d1fae5" },
-  purple: { from: "#faf5ff", to: "#e9d5ff" },
-  rose: { from: "#fff1f2", to: "#ffe4e6" },
-  amber: { from: "#fffbeb", to: "#fef3c7" },
+  blue: { from: "#dbeafe", to: "#e0e7ff" },
+  emerald: { from: "#ccfbf1", to: "#dcfce7" },
+  purple: { from: "#e0e7ff", to: "#f3e8ff" },
+  rose: { from: "#fef2f2", to: "#fef3c7" },
+  amber: { from: "#fef3c7", to: "#dbeafe" },
+  minimal: { from: "#e2e8f0", to: "#cbd5e1" },
 }
 
 function getInitialTheme(): Theme {
@@ -99,6 +103,10 @@ export function ThemeBackground({ children, className = "" }: { children: React.
   const getBackgroundStyle = (): React.CSSProperties => {
     if (isDark) return { background: "#0f172a" }
     
+    if (currentTheme === "minimal") {
+      return { background: "#e2e8f0" }
+    }
+
     switch (backgroundStyle) {
       case "monotone":
         return { background: themeLightColors[currentTheme] }
@@ -114,6 +122,7 @@ export function ThemeBackground({ children, className = "" }: { children: React.
     <div 
       className={`min-h-screen transition-colors duration-300 ${className}`}
       style={getBackgroundStyle()}
+      suppressHydrationWarning
     >
       {children}
     </div>

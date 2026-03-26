@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { User, Bell, Shield, Palette, Database, Key, Globe, Moon, Sun, ChevronRight, Mail, ArrowLeft, Check, X, AlertTriangle, Bot } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
+import { cn } from "@/lib/utils"
 
 export default function Settings() {
   const router = useRouter()

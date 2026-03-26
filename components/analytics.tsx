@@ -36,18 +36,18 @@ export function Analytics({ leads }: AnalyticsProps) {
     : 0
 
   const statCards = [
-    { label: "Total Leads", value: leads.length, icon: Users, color: "bg-blue-500" },
-    { label: "Pending", value: pending.length, icon: Clock, color: "bg-amber-500" },
-    { label: "Approved", value: approved.length, icon: CheckCircle, color: "bg-emerald-500" },
-    { label: "Declined", value: declined.length, icon: XCircle, color: "bg-slate-500" },
-    { label: "Avg Rating", value: avgRating, icon: Star, color: "bg-amber-400", suffix: "/5" },
-    { label: "Approval Rate", value: `${approvalRate}%`, icon: TrendingUp, color: "bg-blue-400" },
+    { label: "Total Leads", value: leads.length, icon: Users, color: "bg-slate-600" },
+    { label: "Pending", value: pending.length, icon: Clock, color: "bg-slate-500" },
+    { label: "Approved", value: approved.length, icon: CheckCircle, color: "bg-slate-600" },
+    { label: "Declined", value: declined.length, icon: XCircle, color: "bg-slate-400" },
+    { label: "Avg Rating", value: avgRating, icon: Star, color: "bg-slate-500", suffix: "/5" },
+    { label: "Approval Rate", value: `${approvalRate}%`, icon: TrendingUp, color: "bg-slate-600" },
   ]
 
   const sourceData = [
-    { source: "WhatsApp", count: whatsappLeads.length, color: "bg-emerald-500", icon: MessageCircle },
-    { source: "Email", count: emailLeads.length, color: "bg-blue-500", icon: Mail },
-    { source: "Manual", count: manual.length, color: "bg-purple-500", icon: Hand },
+    { source: "WhatsApp", count: whatsappLeads.length, color: "bg-slate-500", icon: MessageCircle },
+    { source: "Email", count: emailLeads.length, color: "bg-slate-400", icon: Mail },
+    { source: "Manual", count: manual.length, color: "bg-slate-600", icon: Hand },
   ]
 
   const ratingDistribution = [

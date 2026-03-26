@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import useSWR from "swr"
+import Link from "next/link"
 import { AppHeader } from "@/components/app-header"
 import { LeadDetailPanel } from "@/components/lead-detail-panel"
-import { Search, Mail, MessageCircle, Plus, Heart, Clock, ChevronRight, ArrowUpDown, Filter, X, ChevronDown, Phone, XCircle, RotateCcw, Trash2, AlertTriangle } from "lucide-react"
+import { Search, Mail, MessageCircle, Plus, Heart, Clock, ChevronRight, ArrowUpDown, Filter, X, ChevronDown, Phone, XCircle, RotateCcw, Trash2, AlertTriangle, LayoutGrid } from "lucide-react"
 import type { Lead, LeadSource } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
@@ -138,13 +139,13 @@ export default function LeadsPage() {
           </div>
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Import Lead
           </button>
         </div>
-
+          
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -153,7 +154,7 @@ export default function LeadsPage() {
               placeholder="Search leads..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-10 rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="w-full h-10 rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100"
             />
           </div>
           
@@ -161,13 +162,13 @@ export default function LeadsPage() {
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
               "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors",
-              showFilters ? "bg-blue-50 border-blue-300 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
+              showFilters ? "bg-slate-100 border-slate-300 text-slate-800" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
             )}
           >
             <Filter className="h-4 w-4" />
             Filters
             {(sourceFilter !== "all") && (
-              <span className="h-2 w-2 rounded-full bg-blue-500" />
+              <span className="h-2 w-2 rounded-full bg-slate-500" />
             )}
           </button>
 
@@ -175,7 +176,7 @@ export default function LeadsPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="h-10 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 appearance-none cursor-pointer focus:border-blue-400 focus:outline-none"
+              className="h-10 pl-3 pr-8 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 appearance-none cursor-pointer focus:border-slate-400 focus:outline-none"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -196,7 +197,7 @@ export default function LeadsPage() {
                 onClick={() => setSourceFilter("all")}
                 className={cn(
                   "px-3 py-1.5 text-sm rounded-lg border transition-colors",
-                  sourceFilter === "all" ? "bg-blue-100 border-blue-300 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
+                  sourceFilter === "all" ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                 )}
               >
                 All
@@ -205,7 +206,7 @@ export default function LeadsPage() {
                 onClick={() => setSourceFilter("whatsapp")}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors",
-                  sourceFilter === "whatsapp" ? "bg-emerald-100 border-emerald-300 text-emerald-700" : "bg-white border-slate-200 text-slate-600 hover:border-emerald-300"
+                  sourceFilter === "whatsapp" ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                 )}
               >
                 <MessageCircle className="h-3.5 w-3.5" />
@@ -215,7 +216,7 @@ export default function LeadsPage() {
                 onClick={() => setSourceFilter("email")}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors",
-                  sourceFilter === "email" ? "bg-blue-100 border-blue-300 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
+                  sourceFilter === "email" ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                 )}
               >
                 <Mail className="h-3.5 w-3.5" />
@@ -229,7 +230,7 @@ export default function LeadsPage() {
                   setSourceFilter("all")
                   setSearchQuery("")
                 }}
-                className="ml-auto flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600"
+                className="ml-auto flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
               >
                 <X className="h-4 w-4" />
                 Clear filters
@@ -241,12 +242,12 @@ export default function LeadsPage() {
         {manualLeads.length > 0 && (
           <section>
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
-                <Clock className="h-5 w-5 text-amber-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                <Clock className="h-5 w-5 text-slate-500 dark:text-slate-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Needs Manual Review</h2>
-                <p className="text-sm text-slate-500">{manualLeads.length} leads require human approval</p>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Needs Manual Review</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{manualLeads.length} leads require human approval</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -254,22 +255,22 @@ export default function LeadsPage() {
                 <button
                   key={lead.id}
                   onClick={() => setSelectedLead(lead)}
-                  className="flex items-center gap-4 rounded-xl border border-amber-200 bg-white p-5 text-left hover:shadow-md hover:border-amber-300 transition-all cursor-pointer"
+                  className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 text-left hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all cursor-pointer"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     {lead.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-slate-800 truncate">{lead.name}</h3>
-                      {lead.isLoyal && <Heart className="h-4 w-4 text-red-500 fill-red-500 shrink-0" />}
+                      <h3 className="font-medium text-slate-800 dark:text-slate-100 truncate">{lead.name}</h3>
+                      {lead.isLoyal && <Heart className="h-4 w-4 text-slate-400 fill-slate-400 shrink-0" />}
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       <div className="flex items-center gap-0.5">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <svg
                             key={i}
-                            className={cn("h-3.5 w-3.5", i < lead.rating ? "text-amber-400 fill-amber-400" : "text-slate-300")}
+                            className={cn("h-3.5 w-3.5", i < lead.rating ? "text-slate-500 fill-slate-500" : "text-slate-300")}
                             viewBox="0 0 24 24"
                             stroke={i < lead.rating ? "none" : "currentColor"}
                             strokeWidth={1.5}
@@ -281,10 +282,10 @@ export default function LeadsPage() {
                       </div>
                       <span className="text-xs text-slate-500 ml-1">{lead.rating}/5</span>
                     </div>
-                    <p className="text-sm text-slate-500 truncate mt-2">{lead.conversationSummary}</p>
-                    <div className="flex items-center gap-4 mt-3 text-xs text-slate-600">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-2">{lead.conversationSummary}</p>
+                    <div className="flex items-center gap-4 mt-3 text-xs text-slate-600 dark:text-slate-400">
                       <span className="flex items-center gap-1">
-                        <Phone className="h-3.5 w-3.5 text-blue-500" />
+                        <Phone className="h-3.5 w-3.5 text-slate-400" />
                         {lead.phone}
                       </span>
                       <span className="flex items-center gap-1">
@@ -295,7 +296,7 @@ export default function LeadsPage() {
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
                       <span className={cn(
                         "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full",
-                        lead.source === "whatsapp" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                        lead.source === "whatsapp" ? "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                       )}>
                         {lead.source === "whatsapp" ? (
                           <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -313,7 +314,7 @@ export default function LeadsPage() {
               <div className="flex justify-center mt-4">
                 <button
                   onClick={() => setShowAllManual(!showAllManual)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                 >
                   {showAllManual ? (
                     <>
@@ -335,12 +336,12 @@ export default function LeadsPage() {
         {loyalCustomers.length > 0 && (
           <section>
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-900/50">
-                <Heart className="h-5 w-5 text-rose-500 fill-rose-500" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                <Heart className="h-5 w-5 text-slate-500 dark:text-slate-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Priority Customers</h2>
-                <p className="text-sm text-slate-500">Your loyal and returning customers</p>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Priority Customers</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Your loyal and returning customers</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -348,21 +349,21 @@ export default function LeadsPage() {
                 <button
                   key={lead.id}
                   onClick={() => setSelectedLead(lead)}
-                  className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 text-left hover:shadow-md hover:border-blue-200 dark:hover:border-blue-500 transition-all cursor-pointer"
+                  className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 text-left hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all cursor-pointer"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 text-sm font-bold text-rose-600 dark:bg-rose-900 dark:text-rose-200">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     {lead.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-slate-800 dark:text-slate-100 truncate">{lead.name}</h3>
-                      <Heart className="h-4 w-4 text-rose-500 fill-rose-500 shrink-0" />
+                      <Heart className="h-4 w-4 text-slate-400 fill-slate-400 shrink-0" />
                     </div>
-                    <p className="text-sm text-slate-500 truncate">{lead.workType}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{lead.workType}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={cn(
                         "text-xs px-2 py-0.5 rounded-full",
-                        lead.status === "approved" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200"
+                        lead.status === "approved" ? "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                       )}>
                         {lead.status}
                       </span>
@@ -378,12 +379,12 @@ export default function LeadsPage() {
         {declinedLeads.length > 0 && (
           <section>
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
-                <XCircle className="h-5 w-5 text-slate-500" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                <XCircle className="h-5 w-5 text-slate-500 dark:text-slate-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Declined Leads</h2>
-                <p className="text-sm text-slate-500">{declinedLeads.length} declined leads (auto-delete after 30 days)</p>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Declined Leads</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{declinedLeads.length} declined leads (auto-delete after 30 days)</p>
               </div>
             </div>
             <div className="space-y-3">
@@ -392,30 +393,30 @@ export default function LeadsPage() {
                 return (
                   <div
                     key={lead.id}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4"
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 p-4"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                         {lead.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-slate-800">{lead.name}</h3>
+                          <h3 className="font-medium text-slate-800 dark:text-slate-100">{lead.name}</h3>
                           <span className={cn(
                             "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full",
-                            daysLeft <= 7 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+                            daysLeft <= 7 ? "bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-200" : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                           )}>
                             <AlertTriangle className="h-3 w-3" />
                             {daysLeft <= 0 ? "Delete today" : `${daysLeft} days left`}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-500">{lead.workType}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{lead.workType}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleUndecline(lead.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
                         title="Move back to manual review"
                       >
                         <RotateCcw className="h-4 w-4" />
@@ -423,7 +424,7 @@ export default function LeadsPage() {
                       </button>
                       <button
                         onClick={() => handleDeleteLead(lead.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
                         title="Delete permanently"
                       >
                         <Trash2 className="h-4 w-4" />

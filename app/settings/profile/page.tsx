@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, User, Mail, Phone, MapPin, Camera, Save, Check } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
+import { cn } from "@/lib/utils"
 import { useProfile } from "@/lib/use-profile"
 
 export default function ProfilePage() {

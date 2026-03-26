@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Check, Moon, Sun, Palette, Square, Droplets, Shapes, Image as ImageIcon, Sparkles } from "lucide-react"
-import type { Theme, Mode } from "@/lib/theme-context"
+import type { Theme, Mode, UIStyle } from "@/lib/theme-context"
 import type { BackgroundStyle } from "@/lib/use-theme-gradient"
 import { cn } from "@/lib/utils"
 import { useThemeGradient } from "@/lib/use-theme-gradient"
@@ -11,43 +11,51 @@ import { useThemeGradient } from "@/lib/use-theme-gradient"
 const themes: { id: Theme; name: string; colors: string[]; preview: string; gradientFrom: string; gradientTo: string }[] = [
   { 
     id: "blue", 
-    name: "Ocean Blue", 
-    colors: ["bg-blue-500", "bg-blue-600", "bg-blue-700"], 
-    preview: "from-blue-500 to-blue-700",
-    gradientFrom: "from-blue-50",
-    gradientTo: "to-blue-100/50"
+    name: "Ocean", 
+    colors: ["bg-blue-600", "bg-blue-700", "bg-blue-800"], 
+    preview: "from-blue-600 to-blue-800",
+    gradientFrom: "from-blue-100",
+    gradientTo: "to-blue-200"
   },
   { 
     id: "emerald", 
-    name: "Forest Green", 
-    colors: ["bg-emerald-500", "bg-emerald-600", "bg-emerald-700"], 
-    preview: "from-emerald-500 to-emerald-700",
-    gradientFrom: "from-emerald-50",
-    gradientTo: "to-emerald-100/50"
+    name: "Forest", 
+    colors: ["bg-emerald-600", "bg-emerald-700", "bg-emerald-800"], 
+    preview: "from-emerald-600 to-emerald-800",
+    gradientFrom: "from-emerald-100",
+    gradientTo: "to-emerald-200"
   },
   { 
     id: "purple", 
-    name: "Royal Purple", 
-    colors: ["bg-purple-500", "bg-purple-600", "bg-purple-700"], 
-    preview: "from-purple-500 to-purple-700",
-    gradientFrom: "from-purple-50",
-    gradientTo: "to-purple-100/50"
+    name: "Dusk", 
+    colors: ["bg-violet-600", "bg-violet-700", "bg-violet-800"], 
+    preview: "from-violet-600 to-violet-800",
+    gradientFrom: "from-violet-100",
+    gradientTo: "to-violet-200"
   },
   { 
     id: "rose", 
-    name: "Sunset Rose", 
+    name: "Sunset", 
     colors: ["bg-rose-500", "bg-rose-600", "bg-rose-700"], 
     preview: "from-rose-500 to-rose-700",
-    gradientFrom: "from-rose-50",
-    gradientTo: "to-rose-100/50"
+    gradientFrom: "from-rose-100",
+    gradientTo: "to-rose-200"
   },
   { 
     id: "amber", 
-    name: "Golden Amber", 
-    colors: ["bg-amber-500", "bg-amber-600", "bg-amber-700"], 
-    preview: "from-amber-500 to-amber-700",
-    gradientFrom: "from-amber-50",
-    gradientTo: "to-amber-100/50"
+    name: "Dawn", 
+    colors: ["bg-orange-500", "bg-orange-600", "bg-orange-700"], 
+    preview: "from-orange-500 to-orange-700",
+    gradientFrom: "from-orange-100",
+    gradientTo: "to-orange-200"
+  },
+  { 
+    id: "minimal", 
+    name: "Minimal", 
+    colors: ["bg-slate-500", "bg-slate-600", "bg-slate-700"], 
+    preview: "from-slate-500 to-slate-600",
+    gradientFrom: "from-slate-200",
+    gradientTo: "to-slate-300"
   },
 ]
 
@@ -63,6 +71,7 @@ const themeLightColors: Record<Theme, string> = {
   purple: "#faf5ff",
   rose: "#fff1f2",
   amber: "#fffbeb",
+  minimal: "#e2e8f0",
 }
 
 export default function ThemePage() {
@@ -70,6 +79,7 @@ export default function ThemePage() {
   const [selectedTheme, setSelectedTheme] = useState<Theme>("blue")
   const [selectedMode, setSelectedMode] = useState<Mode>("light")
   const [selectedBgStyle, setSelectedBgStyle] = useState<BackgroundStyle>("gradient")
+  const [selectedUIStyle, setSelectedUIStyle] = useState<UIStyle>("colorful")
   const [saved, setSaved] = useState(false)
   const { gradient, saveBackgroundStyle } = useThemeGradient()
 
@@ -77,9 +87,11 @@ export default function ThemePage() {
     const savedTheme = localStorage.getItem("theme") as Theme | null
     const savedMode = localStorage.getItem("mode") as Mode | null
     const savedBgStyle = localStorage.getItem("backgroundStyle") as BackgroundStyle | null
+    const savedUIStyle = localStorage.getItem("uiStyle") as UIStyle | null
     if (savedTheme) setSelectedTheme(savedTheme)
     if (savedMode) setSelectedMode(savedMode)
     if (savedBgStyle) setSelectedBgStyle(savedBgStyle)
+    if (savedUIStyle) setSelectedUIStyle(savedUIStyle)
   }, [])
 
   const applyTheme = (theme: Theme, mode: Mode) => {
@@ -109,6 +121,16 @@ export default function ThemePage() {
     saveBackgroundStyle(style)
   }
 
+  const handleUIStyleChange = (style: UIStyle) => {
+    setSelectedUIStyle(style)
+    localStorage.setItem("uiStyle", style)
+    if (style === "minimal") {
+      document.documentElement.classList.add("ui-minimal")
+    } else {
+      document.documentElement.classList.remove("ui-minimal")
+    }
+  }
+
   const handleSave = () => {
     applyTheme(selectedTheme, selectedMode)
     setSaved(true)
@@ -122,10 +144,10 @@ export default function ThemePage() {
 
   return (
     <div className={cn(
-      "min-h-screen bg-gradient-to-br p-6",
-      currentThemeData 
-        ? `${currentThemeData.gradientFrom} ${currentThemeData.gradientTo}`
-        : `${gradient.from} ${gradient.to}`
+      "min-h-screen p-6",
+      selectedTheme === "minimal" 
+        ? "bg-slate-200 dark:bg-slate-900"
+        : `bg-gradient-to-br ${currentThemeData ? `${currentThemeData.gradientFrom} ${currentThemeData.gradientTo}` : `${gradient.from} ${gradient.to}`}`
     )}>
       <div className="max-w-2xl mx-auto">
         <button
@@ -264,6 +286,58 @@ export default function ThemePage() {
                   <p className="font-medium text-slate-800">Dark Mode</p>
                   <p className="text-sm text-slate-500 mt-1">Easy on the eyes</p>
                   {selectedMode === "dark" && (
+                    <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center">
+                      <Check className="h-4 w-4 text-white" />
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Palette className="h-5 w-5 text-slate-500" />
+                <h2 className="text-lg font-semibold text-slate-800">UI Style</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleUIStyleChange("colorful")}
+                  className={cn(
+                    "relative p-6 rounded-xl border-2 transition-all cursor-pointer text-left",
+                    selectedUIStyle === "colorful"
+                      ? "border-slate-800 bg-slate-50"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  )}
+                >
+                  <div className="h-16 w-full rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center gap-2 mb-3">
+                    <span className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded">Button</span>
+                    <span className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">Text</span>
+                  </div>
+                  <p className="font-medium text-slate-800">Colorful</p>
+                  <p className="text-sm text-slate-500 mt-1">Theme-colored buttons and text</p>
+                  {selectedUIStyle === "colorful" && (
+                    <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center">
+                      <Check className="h-4 w-4 text-white" />
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleUIStyleChange("minimal")}
+                  className={cn(
+                    "relative p-6 rounded-xl border-2 transition-all cursor-pointer text-left",
+                    selectedUIStyle === "minimal"
+                      ? "border-slate-800 bg-slate-50"
+                      : "border-slate-200 hover:border-slate-300 bg-white"
+                  )}
+                >
+                  <div className="h-16 w-full rounded-lg bg-slate-200 flex items-center justify-center gap-2 mb-3">
+                    <span className="px-3 py-1.5 bg-slate-600 text-white text-xs font-medium rounded">Button</span>
+                    <span className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-medium rounded">Text</span>
+                  </div>
+                  <p className="font-medium text-slate-800">Minimal</p>
+                  <p className="text-sm text-slate-500 mt-1">Neutral slate-colored UI elements</p>
+                  {selectedUIStyle === "minimal" && (
                     <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center">
                       <Check className="h-4 w-4 text-white" />
                     </div>

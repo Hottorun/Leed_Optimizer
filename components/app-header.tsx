@@ -33,6 +33,7 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
   }, [])
 
   const getActivePage = () => {
+    if (pathname === "/top") return "Top"
     if (pathname === "/") return "Dashboard"
     if (pathname === "/leads") return "Leads"
     if (pathname === "/analytics") return "Analytics"
@@ -41,6 +42,7 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
   }
 
   const navItems = [
+    { name: "Top", path: "/top" },
     { name: "Dashboard", path: "/" },
     { name: "Leads", path: "/leads" },
     { name: "Analytics", path: "/analytics" },
@@ -58,7 +60,7 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
       <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-800">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800">
               <span className="text-sm font-bold text-white">A</span>
             </div>
             <span className="text-lg font-semibold text-slate-800">aclea</span>
@@ -71,8 +73,8 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
                 onClick={() => router.push(item.path)}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer ${
                   getActivePage() === item.name 
-                    ? "bg-blue-100 text-blue-700" 
-                    : "text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                    ? "bg-slate-100 text-slate-800" 
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                 }`}
               >
                 {item.name}
@@ -85,7 +87,7 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors disabled:opacity-50"
+            className="p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`} />
           </button>
@@ -93,10 +95,10 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
           <div className="relative" ref={notificationRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+              className="relative p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"
             >
               <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-blue-500" />
+              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-slate-500" />
             </button>
             
             {showNotifications && (
@@ -108,7 +110,7 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
                   {notifications.map((notif) => (
                     <div
                       key={notif.id}
-                      className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
+                      className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
                     >
                       <p className="text-sm text-slate-800">{notif.text}</p>
                       <p className="text-xs text-slate-400 mt-1">{notif.time}</p>
@@ -116,7 +118,7 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
                   ))}
                 </div>
                 <div className="px-4 py-2 border-t border-slate-100 bg-slate-50">
-                  <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  <button className="text-sm text-slate-600 hover:text-slate-800 font-medium">
                     View all notifications
                   </button>
                 </div>
@@ -145,11 +147,11 @@ export function AppHeader({ onRefresh, isRefreshing }: AppHeaderProps) {
                   <p className="text-xs text-slate-500">admin@aclea.com</p>
                 </div>
                 <div className="py-1">
-                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-100 transition-colors">
                     <Settings className="h-4 w-4" />
                     Settings
                   </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 transition-colors">
                     <LogOut className="h-4 w-4" />
                     Log out
                   </button>
