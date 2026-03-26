@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getLeads, addLead, getSettings } from "@/lib/supabase"
+import { getLeads, addLead, getSettings, getSupabase } from "@/lib/supabase"
 import type { CollectedData } from "@/lib/types"
 
 interface User {
@@ -17,7 +17,24 @@ async function getCurrentUser(): Promise<User | null> {
   const token = cookieStore.get("auth_token")
   if (!token) return null
   try {
-    return JSON.parse(token.value) as User
+    const user = JSON.parse(token.value) as User
+    
+    // Refresh team info from database
+    const supabase = getSupabase()
+    if (supabase && user.id) {
+      const { data } = await supabase
+        .from("users")
+        .select("team_id, team_role")
+        .eq("id", user.id)
+        .single()
+      
+      if (data) {
+        user.teamId = data.team_id
+        user.teamRole = data.team_role
+      }
+    }
+    
+    return user
   } catch {
     return null
   }

@@ -172,3 +172,46 @@ CREATE POLICY "Users can update team settings" ON settings
 -- 4. Team owners can transfer ownership to another admin/member
 --
 -- =====================================================
+
+-- =====================================================
+-- SECURITY: Create function to fetch user by email (bypasses RLS)
+-- This function uses SECURITY DEFINER which runs with the
+-- privileges of the user who created it, bypassing RLS.
+-- This is needed because we need to read users table for auth.
+-- =====================================================
+CREATE OR REPLACE FUNCTION get_user_by_email(p_email TEXT)
+RETURNS TABLE(
+  id UUID,
+  email TEXT,
+  name TEXT,
+  role TEXT,
+  password TEXT,
+  team_id UUID,
+  team_role TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT u.id, u.email, u.name, u.role, u.password, u.team_id, u.team_role
+  FROM users u
+  WHERE u.email ILIKE p_email
+  LIMIT 1;
+END;
+$$;
+
+-- =====================================================
+-- KEY CONFIGURATION (new Supabase key model)
+-- =====================================================
+-- 
+-- PUBLISHABLE KEY (safe for frontend - sb_publishable_*)
+-- - Use in: NEXT_PUBLIC_SUPABASE_ANON_KEY
+-- - Requires RLS policies on all tables
+--
+-- SECRET KEY (backend only - sb_secret_*)
+-- - Use in: SUPABASE_SECRET_KEY (server-side only!)
+-- - Has full access bypassing RLS
+--
+-- For more info: https://supabase.com/docs/guides/api/api-keys
+-- =====================================================

@@ -14,19 +14,25 @@ interface DbUser extends User {
   password: string
 }
 
-const mockUsers: DbUser[] = [
-  { 
-    id: "1", 
-    email: "admin@leadflow.com", 
-    password: await bcrypt.hash("admin123", 10), 
-    name: "Admin User", 
-    role: "admin" 
+const mockUsers: DbUser[] = []
+
+async function getMockAdminPassword(): Promise<string> {
+  if (mockUsers.length === 0) {
+    const hash = await bcrypt.hash("admin123", 10)
+    mockUsers.push({
+      id: "1",
+      email: "admin@leadflow.com",
+      password: hash,
+      name: "Admin User",
+      role: "admin"
+    })
   }
-]
+  return mockUsers[0].password
+}
 
 function getSupabase(): SupabaseClient | null {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
   if (!supabaseUrl || !supabaseKey) {
     return null

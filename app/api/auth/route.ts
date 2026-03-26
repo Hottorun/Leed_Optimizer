@@ -14,11 +14,18 @@ interface User {
 
 interface DbUser extends User {
   password: string
+  team_id?: string
+  team_role?: string
+}
+
+interface TeamInfo {
+  team_id?: string
+  team_role?: string
 }
 
 function getSupabase(): SupabaseClient | null {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
   if (!supabaseUrl || !supabaseKey) {
     return null
@@ -33,6 +40,16 @@ async function verifyPassword(password: string, hashedPassword: string): Promise
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)
+}
+
+async function getUserByEmail(email: string): Promise<DbUser | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
+
+  const { data, error } = await supabase.rpc('get_user_by_email', { p_email: email })
+  
+  if (error || !data || data.length === 0) return null
+  return data[0]
 }
 
 export async function POST(request: Request) {
@@ -56,20 +73,15 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("id, email, name, role, password, team_id, team_role")
-      .ilike("email", email)
-      .limit(1)
+    const userData = await getUserByEmail(email)
     
-    if (error || !data || data.length === 0) {
+    if (!userData) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
       )
     }
     
-    const userData = data[0]
     const passwordValid = await verifyPassword(password, userData.password)
     
     if (!passwordValid) {
@@ -79,15 +91,37 @@ export async function POST(request: Request) {
       )
     }
     
+    console.log("Auth - userData from DB:", userData)
+    
+    // Fetch fresh team info from database
+    let teamId = userData.team_id
+    let teamRole = userData.team_role
+    
+    const supabaseClient = getSupabase()
+    if (supabaseClient && userData.id) {
+      const { data: freshData } = await supabaseClient
+        .from("users")
+        .select("team_id, team_role")
+        .eq("id", userData.id)
+        .single()
+      
+      if (freshData) {
+        teamId = freshData.team_id
+        teamRole = freshData.team_role
+      }
+    }
+    
     const user: User = { 
       id: userData.id, 
       email: userData.email, 
       name: userData.name, 
       role: userData.role,
-      teamId: userData.team_id,
-      teamRole: userData.team_role,
+      teamId: teamId,
+      teamRole: teamRole as "owner" | "admin" | "member" | undefined,
     }
 
+    console.log("Auth - created user object with team:", user)
+    
     const cookieStore = await cookies()
     cookieStore.set("auth_token", JSON.stringify(user), {
       httpOnly: true,

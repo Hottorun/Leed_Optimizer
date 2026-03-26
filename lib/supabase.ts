@@ -8,11 +8,11 @@ async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)
 }
 
-function getSupabase(): SupabaseClient | null {
+export function getSupabase(): SupabaseClient | null {
   if (supabase) return supabase
   
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
   if (!supabaseUrl || !supabaseKey) {
     return null
@@ -66,6 +66,8 @@ export async function getLeads(teamId?: string): Promise<Lead[]> {
     leadsQuery.eq("teams_id", teamId)
   }
 
+  console.log("getLeads: teamId =", teamId)
+  
   const { data: leadsData, error: leadsError } = await leadsQuery
 
   if (leadsError) {
@@ -486,16 +488,20 @@ function mapDbLeadToLead(
   },
   session?: LeadSession
 ): Lead {
+  const collectedData = session?.collectedData || {}
   return {
     id: row.id,
     name: row.name,
     phone: row.phone,
     email: row.email,
+    location: collectedData.location,
+    workType: collectedData.workType,
+    conversationSummary: collectedData.message,
     leadCount: row.lead_count || 1,
     isLoyal: row.is_loyal || false,
     autoApproved: row.auto_approved || false,
     lastContactedAt: row.last_contacted_at,
-    status: (row.status as Lead["status"]) || "pending",
+    status: (session?.status as Lead["status"]) || "pending",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     teamId: row.teams_id,
@@ -512,7 +518,7 @@ function mapDbSessionToSession(row: {
   current_step: string
   collected_data: CollectedData
   needs_more_info: boolean
-  rating?: boolean
+  rating?: number
   rating_reason?: string
   forwarded_at?: string
   updated_at: string

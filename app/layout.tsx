@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import Script from 'next/script'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const dmSans = DM_Sans({ 
@@ -13,7 +13,6 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: 'aclea - Lead Management',
   description: 'Manage and track your leads efficiently',
-  generator: 'v0.app',
   icons: {
     icon: [
       {
@@ -39,29 +38,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="de" suppressHydrationWarning>
       <body className={`${dmSans.variable} font-sans antialiased`}>
-        {children}
-        <Analytics />
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`
-            (function() {
-              try {
-                var mode = localStorage.getItem('mode');
-                var theme = localStorage.getItem('theme');
-                if (mode === 'dark') {
-                  document.documentElement.classList.add('dark');
-                  document.documentElement.setAttribute('data-mode', 'dark');
-                } else {
-                  document.documentElement.setAttribute('data-mode', 'light');
-                }
-                if (theme) {
-                  document.documentElement.setAttribute('data-theme', theme);
-                }
-              } catch (e) {}
-            })();
-          `}
-        </Script>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   )

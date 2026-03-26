@@ -1,4 +1,4 @@
-export type LeadStatus = "pending" | "approved" | "declined" | "manual"
+export type LeadStatus = "pending" | "approved" | "declined" | "manual" | "active" | "completed" | "cancelled"
 export type LeadSource = "whatsapp" | "email"
 
 export interface LeadSession {
@@ -10,7 +10,7 @@ export interface LeadSession {
   currentStep: string
   collectedData: CollectedData
   needsMoreInfo: boolean
-  rating?: boolean
+  rating?: number
   ratingReason?: string
   forwardedAt?: string
   updatedAt: string

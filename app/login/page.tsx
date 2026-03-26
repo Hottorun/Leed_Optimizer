@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Zap, Loader2, Mail, Lock, ArrowLeft } from "lucide-react"
 import { useTheme } from "next-themes"
-import { cn } from "@/lib/utils"
+import { translations, type Language, type TranslationKey } from "@/lib/translations"
+
+function getInitialLanguage(): Language {
+  if (typeof window === "undefined") return "en"
+  const stored = localStorage.getItem("language")
+  return (stored === "de" || stored === "en") ? stored : "en"
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -17,13 +23,20 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { resolvedTheme } = useTheme()
+  const [language, setLanguage] = useState<Language>("en")
+
+  const t = (key: TranslationKey): string => translations[language][key] || key
+
+  useEffect(() => {
+    setLanguage(getInitialLanguage())
+  }, [])
 
   useEffect(() => {
     fetch("/api/auth")
       .then((res) => res.json())
       .then((data) => {
         if (data.user) {
-          router.push("/")
+      router.push("/dashboard")
         }
       })
       .catch(() => {})
@@ -44,14 +57,14 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || "Login fehlgeschlagen")
+        setError(data.error || t("loginFailed"))
         return
       }
 
-      router.push("/")
+      router.push("/dashboard")
       router.refresh()
     } catch {
-      setError("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.")
+      setError("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -68,19 +81,19 @@ export default function LoginPage() {
               </div>
               <span className="text-2xl font-bold text-foreground">aclea</span>
             </Link>
-            <h1 className="text-xl font-semibold text-foreground">Willkommen zuruck</h1>
-            <p className="text-muted-foreground mt-1">Melden Sie sich an, um Ihre Leads zu verwalten</p>
+            <h1 className="text-xl font-semibold text-foreground">{t("welcomeBack")}</h1>
+            <p className="text-muted-foreground mt-1">{t("signInToManage")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">E-Mail</Label>
+              <Label htmlFor="email" className="text-sm font-medium">{t("email")}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="ihre@email.de"
+                  placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -91,9 +104,9 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium">Passwort</Label>
+                <Label htmlFor="password" className="text-sm font-medium">{t("password")}</Label>
                 <Link href="#" className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
-                  Vergessen?
+                  {t("forgot")}?
                 </Link>
               </div>
               <div className="relative">
@@ -101,7 +114,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Ihr Passwort"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -118,10 +131,10 @@ export default function LoginPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Anmelden...
+                  {t("signingIn")}...
                 </>
               ) : (
-                "Anmelden"
+                t("signIn")
               )}
             </Button>
           </form>
@@ -132,14 +145,14 @@ export default function LoginPage() {
                 <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">oder</span>
+                <span className="bg-card px-2 text-muted-foreground">{t("or")}</span>
               </div>
             </div>
 
             <p className="mt-4 text-center text-sm text-muted-foreground">
-              Noch kein Konto?{" "}
+              {t("noAccount")}{" "}
               <Link href="/register" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                Jetzt registrieren
+                {t("signUpNow")}
               </Link>
             </p>
           </div>
@@ -147,7 +160,7 @@ export default function LoginPage() {
 
         <Link href="/" className="flex items-center justify-center gap-2 mt-6 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="size-4" />
-          Zuruck zur Startseite
+          {t("backToHome")}
         </Link>
       </div>
     </div>

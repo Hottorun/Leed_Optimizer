@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Pagination } from "./pagination"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { useProfile } from "@/lib/use-profile"
+import { useUser } from "@/lib/use-user"
 import type { Lead, LeadStatus, LeadSource } from "@/lib/types"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -26,6 +27,7 @@ export function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1)
 
   const { profile } = useProfile()
+  const { user } = useUser()
 
   const { data: leads = [], mutate, isValidating } = useSWR<Lead[]>(
     "/api/leads",
@@ -84,36 +86,44 @@ export function Dashboard() {
     }
   }
 
+  const getLeadSource = (lead: any): string => {
+    return lead.session?.collectedData?.contactPlatform || lead.source || ""
+  }
+
+  const getLeadStatus = (lead: any): string => {
+    return lead.session?.status || lead.status || "pending"
+  }
+
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch =
       !searchQuery ||
       lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.workType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.conversationSummary.toLowerCase().includes(searchQuery.toLowerCase())
+      (lead.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+      (lead.workType?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+      (lead.conversationSummary?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
 
-    const matchesStatus = !statusFilter || lead.status === statusFilter
-    const matchesSource = !sourceFilter || lead.source === sourceFilter
+    const matchesStatus = !statusFilter || getLeadStatus(lead) === statusFilter
+    const matchesSource = !sourceFilter || getLeadSource(lead) === sourceFilter
 
     return matchesSearch && matchesStatus && matchesSource
   })
 
-  const whatsappLeads = filteredLeads.filter(l => l.source === "whatsapp")
-  const emailLeads = filteredLeads.filter(l => l.source === "email")
+  const whatsappLeads = filteredLeads.filter(l => getLeadSource(l) === "whatsapp")
+  const emailLeads = filteredLeads.filter(l => getLeadSource(l) === "email")
 
   const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE)
   const startIndex = (currentPage - 1) * LEADS_PER_PAGE
   const endIndex = startIndex + LEADS_PER_PAGE
   const paginatedFilteredLeads = filteredLeads.slice(startIndex, endIndex)
   
-  const paginatedWhatsapp = paginatedFilteredLeads.filter(l => l.source === "whatsapp")
-  const paginatedEmail = paginatedFilteredLeads.filter(l => l.source === "email")
+  const paginatedWhatsapp = paginatedFilteredLeads.filter(l => getLeadSource(l) === "whatsapp")
+  const paginatedEmail = paginatedFilteredLeads.filter(l => getLeadSource(l) === "email")
 
   return (
     <ThemeBackground>
-      <AppHeader onRefresh={handleRefresh} isRefreshing={isValidating} />
+      <AppHeader onRefresh={handleRefresh} isRefreshing={isValidating} user={user ? { name: user.name, email: user.email } : undefined} />
       
       <BigStatsHeader 
         leads={leads} 

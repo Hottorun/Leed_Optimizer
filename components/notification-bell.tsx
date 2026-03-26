@@ -44,7 +44,7 @@ export function NotificationBell({ leads, lastLoginTime }: NotificationBellProps
       if (newLead) {
         const session = newLead.session
         const platform = session?.collectedData?.contactPlatform === "whatsapp" ? "WhatsApp" : "Email"
-        const isQualified = session?.rating === true
+        const isQualified = (session?.rating ?? 0) >= 4
         if (newLead.autoApproved) {
           toast.success(`New lead auto-approved: ${newLead.name}`, {
             description: `${platform} lead - Qualified`,

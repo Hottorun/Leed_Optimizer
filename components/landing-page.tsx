@@ -139,7 +139,7 @@ type Language = keyof typeof translations
 type TranslationKey = keyof typeof translations.de
 
 export function LandingPage() {
-  const [language, setLanguage] = useState<Language>('de')
+  const [language, setLanguage] = useState<Language>('en')
   const { theme, setTheme, resolvedTheme } = useTheme()
 
   useEffect(() => {

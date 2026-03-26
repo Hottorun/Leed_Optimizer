@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Zap, Loader2, Mail, Lock, User, ArrowLeft, Check, X, Key } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { translations, type Language, type TranslationKey } from "@/lib/translations"
+
+function getInitialLanguage(): Language {
+  if (typeof window === "undefined") return "en"
+  const stored = localStorage.getItem("language")
+  return (stored === "de" || stored === "en") ? stored : "en"
+}
 
 interface PasswordRequirement {
   label: string
@@ -15,22 +22,22 @@ interface PasswordRequirement {
 }
 
 const passwordRequirements: PasswordRequirement[] = [
-  { label: "Mindestens 8 Zeichen", test: (p) => p.length >= 8 },
-  { label: "Ein Grossbuchstabe", test: (p) => /[A-Z]/.test(p) },
-  { label: "Ein Kleinbuchstabe", test: (p) => /[a-z]/.test(p) },
-  { label: "Eine Zahl", test: (p) => /\d/.test(p) },
-  { label: "Ein Sonderzeichen (!@#$%^&*)", test: (p) => /[!@#$%^&*]/.test(p) },
+  { label: "At least 8 characters", test: (p) => p.length >= 8 },
+  { label: "One uppercase letter", test: (p) => /[A-Z]/.test(p) },
+  { label: "One lowercase letter", test: (p) => /[a-z]/.test(p) },
+  { label: "One number", test: (p) => /\d/.test(p) },
+  { label: "One special character (!@#$%^&*)", test: (p) => /[!@#$%^&*]/.test(p) },
 ]
 
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
   const passed = passwordRequirements.filter((req) => req.test(password)).length
   
   if (password.length === 0) return { score: 0, label: "", color: "" }
-  if (passed <= 1) return { score: 1, label: "Schwach", color: "bg-red-500" }
+  if (passed <= 1) return { score: 1, label: "Weak", color: "bg-red-500" }
   if (passed <= 2) return { score: 2, label: "Fair", color: "bg-orange-500" }
-  if (passed <= 3) return { score: 3, label: "Gut", color: "bg-yellow-500" }
-  if (passed <= 4) return { score: 4, label: "Stark", color: "bg-emerald-500" }
-  return { score: 5, label: "Sehr stark", color: "bg-emerald-600" }
+  if (passed <= 3) return { score: 3, label: "Good", color: "bg-yellow-500" }
+  if (passed <= 4) return { score: 4, label: "Strong", color: "bg-emerald-500" }
+  return { score: 5, label: "Very strong", color: "bg-emerald-600" }
 }
 
 export default function RegisterPage() {
@@ -44,6 +51,13 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingEmail, setIsCheckingEmail] = useState(false)
   const router = useRouter()
+  const [language, setLanguage] = useState<Language>("en")
+
+  const t = (key: TranslationKey): string => translations[language][key] || key
+
+  useEffect(() => {
+    setLanguage(getInitialLanguage())
+  }, [])
 
   const passwordStrength = getPasswordStrength(password)
   const allRequirementsMet = passwordRequirements.every((req) => req.test(password))
@@ -68,7 +82,7 @@ export default function RegisterPage() {
           const res = await fetch(`/api/users/check?email=${encodeURIComponent(email)}`)
           const data = await res.json()
           if (data.exists) {
-            setEmailError("Diese E-Mail-Adresse ist bereits registriert")
+            setEmailError("This email is already registered")
           } else {
             setEmailError("")
           }
@@ -89,12 +103,12 @@ export default function RegisterPage() {
     setError("")
 
     if (!allRequirementsMet) {
-      setError("Bitte erfullen Sie alle Passwort-Anforderungen")
+      setError("Please meet all password requirements")
       return
     }
 
     if (!passwordsMatch) {
-      setError("Die Passworter stimmen nicht uberein")
+      setError("Passwords do not match")
       return
     }
 
@@ -110,18 +124,18 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || "Registrierung fehlgeschlagen")
+        setError(data.error || "Registration failed")
         return
       }
 
       if (data.needsTeam) {
         router.push("/create-team")
       } else {
-        router.push("/")
+        router.push("/dashboard")
         router.refresh()
       }
     } catch {
-      setError("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.")
+      setError("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -138,19 +152,19 @@ export default function RegisterPage() {
               </div>
               <span className="text-2xl font-bold text-foreground">aclea</span>
             </Link>
-            <h1 className="text-xl font-semibold text-foreground">Konto erstellen</h1>
-            <p className="text-muted-foreground mt-1">Registrieren Sie sich, um zu beginnen</p>
+            <h1 className="text-xl font-semibold text-foreground">{t("createAccount")}</h1>
+            <p className="text-muted-foreground mt-1">{t("signUp")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium">Name</Label>
+              <Label htmlFor="name" className="text-sm font-medium">{t("name")}</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="name"
                   type="text"
-                  placeholder="Max Mustermann"
+                  placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -160,13 +174,13 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">E-Mail</Label>
+              <Label htmlFor="email" className="text-sm font-medium">{t("email")}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="ihre@email.de"
+                  placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -185,13 +199,13 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Passwort</Label>
+              <Label htmlFor="password" className="text-sm font-medium">{t("password")}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Ein sicheres Passwort"
+                  placeholder="A secure password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -202,7 +216,7 @@ export default function RegisterPage() {
               {password.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Passwortstarke:</span>
+                    <span>{t("passwordStrength")}:</span>
                     <span className={cn(
                       passwordStrength.score >= 4 ? "text-emerald-600 font-medium" :
                       passwordStrength.score >= 2 ? "text-yellow-600 font-medium" :
@@ -245,13 +259,13 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-sm font-medium">Passwort bestatigen</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-medium">{t("confirmPassword")}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="Passwort erneut eingeben"
+                  placeholder="Re-enter password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -264,14 +278,14 @@ export default function RegisterPage() {
               {confirmPassword.length > 0 && !passwordsMatch && (
                 <p className="text-xs text-destructive flex items-center gap-1">
                   <X className="size-3" />
-                  Passworter stimmen nicht uberein
+                  {t("passwordsDoNotMatch")}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="inviteCode" className="text-sm font-medium">
-                Team-Einladungscode <span className="text-muted-foreground font-normal">(optional)</span>
+                {t("inviteCode")} <span className="text-muted-foreground font-normal">{t("inviteCodeOptional")}</span>
               </Label>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -285,7 +299,7 @@ export default function RegisterPage() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Haben Sie einen Einladungscode von Ihrem Team? Geben Sie ihn hier ein.
+                {t("haveInviteCode")}
               </p>
             </div>
 
@@ -301,19 +315,19 @@ export default function RegisterPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Konto erstellen...
+                  {t("creatingAccount")}
                 </>
               ) : (
-                "Konto erstellen"
+                t("createAccount")
               )}
             </Button>
           </form>
 
           <div className="mt-6">
             <p className="text-center text-sm text-muted-foreground">
-              Bereits ein Konto?{" "}
+              {t("alreadyHaveAccount")}{" "}
               <Link href="/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                Jetzt anmelden
+                {t("signIn")}
               </Link>
             </p>
           </div>
@@ -321,7 +335,7 @@ export default function RegisterPage() {
 
         <Link href="/" className="flex items-center justify-center gap-2 mt-6 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="size-4" />
-          Zuruck zur Startseite
+          {t("backToHome")}
         </Link>
       </div>
     </div>

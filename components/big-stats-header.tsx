@@ -14,10 +14,19 @@ interface BigStatsHeaderProps {
 
 export function BigStatsHeader({ leads, onFilterClick, activeFilter, companyName }: BigStatsHeaderProps) {
   const { gradientColors, currentTheme } = useThemeGradient()
-  const pending = leads.filter((l) => l.status === "pending").length
-  const approved = leads.filter((l) => l.status === "approved").length
-  const declined = leads.filter((l) => l.status === "declined").length
-  const manual = leads.filter((l) => l.status === "manual").length
+  
+  const theme = currentTheme && gradientColors[currentTheme] ? currentTheme : "blue"
+  const colors = gradientColors[theme] || { from: "#f8fafc", to: "#e2e8f0" }
+
+  const getStatus = (lead: Lead): string => {
+    return lead.session?.status || lead.status || "pending"
+  }
+  
+  const pending = leads.filter((l) => getStatus(l) === "pending").length
+  const approved = leads.filter((l) => getStatus(l) === "approved").length
+  const declined = leads.filter((l) => getStatus(l) === "declined").length
+  const active = leads.filter((l) => getStatus(l) === "active").length
+  const manual = leads.filter((l) => getStatus(l) === "manual").length
   const whatsapp = leads.filter((l) => l.source === "whatsapp").length
   const email = leads.filter((l) => l.source === "email").length
 
@@ -54,9 +63,9 @@ export function BigStatsHeader({ leads, onFilterClick, activeFilter, companyName
     <div 
       className="border-b border-slate-300 dark:border-slate-700"
       style={{ 
-        background: currentTheme === "minimal" 
+        background: theme === "minimal" 
           ? undefined 
-          : `linear-gradient(to bottom right, ${gradientColors[currentTheme].from}, ${gradientColors[currentTheme].to})` 
+          : `linear-gradient(to bottom right, ${colors.from}, ${colors.to})` 
       }}
     >
       <div className="px-6 py-8">
