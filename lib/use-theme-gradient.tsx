@@ -103,18 +103,20 @@ export function ThemeBackground({ children, className = "" }: { children: React.
   const getBackgroundStyle = (): React.CSSProperties => {
     if (isDark) return { background: "#0f172a" }
     
-    if (currentTheme === "minimal") {
+    const theme = currentTheme || "blue"
+    
+    if (theme === "minimal") {
       return { background: "#e2e8f0" }
     }
 
     switch (backgroundStyle) {
       case "monotone":
-        return { background: themeLightColors[currentTheme] }
+        return { background: themeLightColors[theme] }
       case "image":
         return { background: "url('/bg-image.jpg') center/cover no-repeat" }
       case "gradient":
       default:
-        return { background: `linear-gradient(to bottom right, ${gradientColors[currentTheme].from}, ${gradientColors[currentTheme].to})` }
+        return { background: `linear-gradient(to bottom right, ${gradientColors[theme].from}, ${gradientColors[theme].to})` }
     }
   }
 
