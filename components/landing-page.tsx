@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useTheme } from 'next-themes'
-import { ArrowRight, ChevronDown, CreditCard, Heart, Menu, Shield, X, Zap, Mail, Phone, MapPin, Sun, Moon, Globe, Check } from 'lucide-react'
+import { ArrowRight, ChevronDown, CreditCard, Heart, Menu, Shield, X, Zap, Mail, Phone, MapPin, Globe, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useLanguage } from './language-provider'
@@ -221,7 +220,6 @@ function ScrollEffects() {
 
 export function LandingPage() {
   const [language, setLanguage] = useState<Language>('en')
-  const { theme, setTheme, resolvedTheme } = useTheme()
 
   useEffect(() => {
     const stored = localStorage.getItem('language') as Language | null
@@ -240,7 +238,7 @@ export function LandingPage() {
 
   return (
     <>
-      <HeroHeader t={t} language={language} toggleLanguage={toggleLanguage} theme={resolvedTheme} setTheme={setTheme} />
+      <HeroHeader t={t} language={language} toggleLanguage={toggleLanguage} />
       <ScrollEffects />
       <HeroGeometric 
         badge={t('badge')}
@@ -260,11 +258,9 @@ interface HeroHeaderProps {
   t: (key: TranslationKey) => string
   language: Language
   toggleLanguage: () => void
-  theme?: string
-  setTheme: (theme: string) => void
 }
 
-function HeroHeader({ t, language, toggleLanguage, theme, setTheme }: HeroHeaderProps) {
+function HeroHeader({ t, language, toggleLanguage }: HeroHeaderProps) {
   const [menuState, setMenuState] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -322,18 +318,6 @@ function HeroHeader({ t, language, toggleLanguage, theme, setTheme }: HeroHeader
               >
                 <Globe className="size-5 text-emerald-400" />
                 <span className="text-sm font-medium uppercase text-white">{language}</span>
-              </button>
-
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="size-5 text-amber-400" />
-                ) : (
-                  <Moon className="size-5 text-white/80" />
-                )}
               </button>
 
               <div className="lg:hidden">
