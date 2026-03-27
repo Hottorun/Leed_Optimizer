@@ -512,29 +512,23 @@ function Footer({ t }: FooterProps) {
           <div>
             <h3 className="font-semibold mb-4 text-white">{t('footerCompany')}</h3>
             <ul className="space-y-3">
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerAbout')}</Link></li>
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerCareers')}</Link></li>
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerBlog')}</Link></li>
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerPress')}</Link></li>
+              <li><Link href="/about" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerAbout')}</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-semibold mb-4 text-white">{t('footerLegal')}</h3>
             <ul className="space-y-3">
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerImprint')}</Link></li>
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerPrivacy')}</Link></li>
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerTerms')}</Link></li>
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerCookies')}</Link></li>
+              <li><Link href="/imprint" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerImprint')}</Link></li>
+              <li><Link href="/privacy" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerPrivacy')}</Link></li>
+              <li><Link href="/terms" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerTerms')}</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-semibold mb-4 text-white">{t('footerSupport')}</h3>
             <ul className="space-y-3">
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerHelp')}</Link></li>
-              <li><Link href="#kontakt" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerContact')}</Link></li>
-              <li><Link href="#" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerStatus')}</Link></li>
+              <li><Link href="/contact" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerContact')}</Link></li>
               <li><Link href="#faq" className="text-sm text-white/60 hover:text-white transition-colors">{t('footerFAQ')}</Link></li>
             </ul>
           </div>
