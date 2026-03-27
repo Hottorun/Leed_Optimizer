@@ -70,15 +70,13 @@ export async function GET() {
     
     const filteredLeads = (leads || []).filter((l: Lead) => {
       const status = l.session?.status
-      return status !== "active" && status !== "closed"
+      return status !== "cancelled"
     })
     
-    const allLeads = [...mockLeads, ...filteredLeads]
-    
-    return NextResponse.json(allLeads)
+    return NextResponse.json(filteredLeads)
   } catch (error) {
     console.error("API Error:", error)
-    return NextResponse.json(mockLeads)
+    return NextResponse.json([])
   }
 }
 

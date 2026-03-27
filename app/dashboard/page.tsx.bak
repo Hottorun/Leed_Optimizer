@@ -1,0 +1,390 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { AppHeader } from "@/components/app-header"
+import { LeadDetailPanel } from "@/components/lead-detail-panel"
+import { ThemeBackground } from "@/lib/use-theme-gradient"
+import { cn } from "@/lib/utils"
+import { useTheme } from "next-themes"
+import { 
+  Zap, TrendingUp, Clock, Heart, Star, ArrowRight,
+  ChevronRight, Sparkles, Target, AlertCircle, CheckCircle
+} from "lucide-react"
+import type { Lead } from "@/lib/types"
+
+const gradientKeyframes = `
+@keyframes gradientShift {
+  0% { background-position: 0% 50% }
+  50% { background-position: 100% 50% }
+  100% { background-position: 0% 50% }
+}
+
+.ai-gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 25%, #c084fc 50%, #a855f7 75%, #4f46e5 100%);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 4s ease infinite;
+}
+
+.ai-gradient-border {
+  background: linear-gradient(135deg, #6366f1, #818cf8, #c084fc, #a855f7, #6366f1);
+  background-size: 300% 300%;
+  animation: gradientShift 4s ease infinite;
+  border-radius: 999px;
+  padding: 2px;
+}
+`
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const { theme } = useTheme()
+  const [user, setUser] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [mounted, setMounted] = useState(false)
+  const [uiStyle, setUIStyle] = useState<"colored" | "minimal">("colored")
+
+  useEffect(() => {
+    setMounted(true)
+    const savedStyle = (localStorage.getItem("uiStyle") || "colored") as "colored" | "minimal"
+    setUIStyle(savedStyle)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    
+    Promise.all([
+      fetch("/api/auth").then(res => res.json()),
+      fetch("/api/leads").then(res => res.json())
+    ])
+      .then(([authData, leadsData]) => {
+        setUser(authData.user)
+        setLeads(leadsData || [])
+        if (!authData.user) {
+          router.push("/login")
+        }
+      })
+      .catch(() => {
+        router.push("/login")
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }, [router, mounted])
+
+  if (!mounted || isLoading) {
+    return (
+      <ThemeBackground>
+        <div className="min-h-screen" />
+      </ThemeBackground>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
+
+  const firstName = user.name?.split(" ")[0] || "User"
+
+  const topLeads = [...leads]
+    .filter(l => {
+      const rating = l.session?.rating ?? 0
+      return rating >= 3
+    })
+    .sort((a, b) => {
+      const aRating = a.session?.rating ?? 0
+      const bRating = b.session?.rating ?? 0
+      if (bRating !== aRating) return bRating - aRating
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+    .slice(0, 3)
+  
+  const urgentLeads = [...leads]
+    .filter(l => {
+      const status = l.session?.status || l.status
+      return status === "pending" || status === "manual"
+    })
+    .sort((a, b) => {
+      const aRating = a.session?.rating ?? 0
+      const bRating = b.session?.rating ?? 0
+      if (bRating !== aRating) return bRating - aRating
+      const aUpdated = new Date(a.updatedAt).getTime()
+      const bUpdated = new Date(b.updatedAt).getTime()
+      return bUpdated - aUpdated
+    })
+    .slice(0, 3)
+
+  const stats = { 
+    totalLeads: leads.length, 
+    newToday: leads.filter(l => {
+      const today = new Date()
+      const created = new Date(l.createdAt)
+      return created.toDateString() === today.toDateString()
+    }).length,
+    pending: leads.filter(l => {
+      const status = l.session?.status || l.status
+      return status === "pending" || status === "manual"
+    }).length,
+    approved: leads.filter(l => {
+      const status = l.session?.status || l.status
+      return status === "approved"
+    }).length
+  }
+
+  const getInitials = (name: string) => {
+    return name.split(" ").map(n => n[0]).join("").slice(0, 2)
+  }
+
+  const getRating = (lead: Lead): number => {
+    return lead.session?.rating ?? 0
+  }
+
+  const getAiCta = (lead: Lead) => {
+    const rating = getRating(lead)
+    if (rating >= 4) return "Contact today"
+    if (rating >= 3) return "Schedule follow-up"
+    return "Send newsletter"
+  }
+
+  const handleUpdateLead = async (updates: Partial<Lead>) => {
+    if (!selectedLead) return
+    try {
+      const response = await fetch(`/api/leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      })
+      if (response.ok) {
+        const updatedLead = await response.json()
+        setSelectedLead(updatedLead)
+        const updatedLeads = leads.map(l => l.id === updatedLead.id ? updatedLead : l)
+        setLeads(updatedLeads)
+      }
+    } catch (error) {
+      console.error("Failed to update lead:", error)
+    }
+  }
+
+  const handleSendMessage = async (action: "approve" | "decline", message: string) => {
+    if (!selectedLead) return
+    try {
+      const response = await fetch(`/api/leads/${selectedLead.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, message }),
+      })
+      if (response.ok) {
+        const result = await response.json()
+        setSelectedLead(result.lead)
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error)
+    }
+  }
+
+  const renderLeadCard = (lead: Lead, index?: number) => (
+    <button
+      key={lead.id}
+      onClick={() => setSelectedLead(lead)}
+      className={cn(
+        "w-full text-left p-4 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800",
+        "hover:shadow-lg hover:border-slate-400 dark:hover:border-slate-500 transition-all cursor-pointer"
+      )}
+    >
+      <div className="flex items-center gap-3">
+        {index !== undefined && (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white text-sm font-bold">
+            {index + 1}
+          </div>
+        )}
+        <div className={cn(
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+          lead.isLoyal 
+            ? "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200" 
+            : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200"
+        )}>
+          {getInitials(lead.name)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">{lead.name}</p>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{lead.phone}</p>
+        </div>
+        <div className="flex items-center gap-1">
+          {[...Array(5)].map((_, i) => (
+            <Star key={i} className={cn(
+              "h-3.5 w-3.5", i < getRating(lead) ? "text-yellow-400 fill-yellow-400" : "text-slate-600 dark:text-slate-500"
+            )} />
+          ))}
+        </div>
+        <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <span className={cn(
+          "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border",
+          uiStyle === "minimal" || theme === "dark"
+            ? "border-indigo-500/50 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-400"
+            : getRating(lead) >= 4 
+              ? "border-indigo-200 bg-indigo-50 text-indigo-600" 
+              : getRating(lead) >= 3 
+                ? "border-blue-200 bg-blue-50 text-blue-600"
+                : "border-slate-200 bg-slate-50 text-slate-500"
+        )}>
+          <Sparkles className={cn("h-3 w-3", uiStyle === "minimal" || theme === "dark" ? "text-indigo-400" : "")} />
+          {getRating(lead) >= 4 ? "High priority" : getRating(lead) >= 3 ? "Medium priority" : "Nurture"}
+        </span>
+        <span className={cn(
+          "text-xs font-medium",
+          uiStyle === "minimal" || theme === "dark"
+            ? "text-indigo-400"
+            : getRating(lead) >= 4 
+              ? "text-indigo-500" 
+              : getRating(lead) >= 3 
+                ? "text-blue-500"
+                : "text-slate-400"
+        )}>{getAiCta(lead)}</span>
+      </div>
+    </button>
+  )
+
+  return (
+    <div key={user.id}>
+      <style dangerouslySetInnerHTML={{ __html: gradientKeyframes }} />
+      <AppHeader onRefresh={() => {}} isRefreshing={false} user={{ name: user.name, email: user.email }} />
+      <ThemeBackground>
+        {selectedLead && (
+          <LeadDetailPanel
+            lead={selectedLead}
+            onClose={() => setSelectedLead(null)}
+            onUpdate={handleUpdateLead}
+            onSendMessage={handleSendMessage}
+          />
+        )}
+        <div className="p-6 space-y-8 max-w-6xl mx-auto">
+          <div className="text-center py-8">
+            <div className="mb-4">
+              <div className={cn("ai-gradient-border inline-flex items-center gap-2", uiStyle === "minimal" ? "" : "")}>
+                <div className={cn("bg-white rounded-full px-4 py-2 flex items-center gap-2", uiStyle === "minimal" ? "" : "")}>
+                  <Sparkles className="h-4 w-4 text-indigo-500" />
+                  <span className="text-sm font-medium text-slate-800">AI-Powered Lead Management</span>
+                </div>
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100">
+              Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 18 ? "Afternoon" : "Evening"},{" "}
+              {firstName}
+            </h1>
+            <p className="text-slate-500 mt-2 text-lg">Here's your lead overview for today</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+            <div className="flex flex-col md:flex-row">
+              <Link href="/leads" className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
+                  <Target className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Total Leads</p>
+                  <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.totalLeads}</p>
+                </div>
+              </Link>
+              <Link href="/leads?sort=newest" className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
+                  <TrendingUp className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">New Today</p>
+                  <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.newToday}</p>
+                </div>
+              </Link>
+              <Link href="/leads?tab=action" className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
+                  <Clock className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Needs Review</p>
+                  <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.pending}</p>
+                </div>
+              </Link>
+              <Link href="/leads?filter=approved" className="flex items-center gap-4 px-6 py-5 flex-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
+                  <CheckCircle className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Approved</p>
+                  <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.approved}</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className={cn("p-5 border-b border-slate-100 dark:border-slate-700", uiStyle === "minimal" ? "bg-slate-100" : "bg-white")}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700">
+                      <Zap className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-slate-800 dark:text-slate-100">Top 3 Leads</h2>
+                      <p className="text-sm text-slate-500">AI's highest value leads</p>
+                    </div>
+                  </div>
+                  <Link href="/leads" className={cn("text-sm flex items-center gap-1", uiStyle === "minimal" ? "text-slate-600 hover:text-slate-700" : "text-amber-600 hover:text-amber-700")}>
+                    View All <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+              <div className="p-4 space-y-3">
+                {topLeads.length > 0 ? (
+                  topLeads.map((lead, index) => renderLeadCard(lead, index))
+                ) : (
+                  <div className="text-center py-8 text-slate-400">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No active leads</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className={cn("p-5 border-b border-slate-100 dark:border-slate-700", uiStyle === "minimal" || theme === "dark" ? "bg-transparent" : "bg-amber-50/30")}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-lg", uiStyle === "minimal" || theme === "dark" ? "bg-amber-900/50" : "bg-amber-100")}>
+                      <AlertCircle className={cn("h-5 w-5", uiStyle === "minimal" || theme === "dark" ? "text-amber-400" : "text-amber-600")} />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-slate-800 dark:text-slate-100">Needs Attention</h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Overdue or high-value leads</p>
+                    </div>
+                  </div>
+                  <Link href="/leads" className={cn("text-sm flex items-center gap-1", uiStyle === "minimal" || theme === "dark" ? "text-amber-400 hover:text-amber-300" : "text-amber-600 hover:text-amber-700")}>
+                    View All <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+              <div className="p-4 space-y-3">
+                {urgentLeads.length > 0 ? (
+                  urgentLeads.map((lead) => renderLeadCard(lead))
+                ) : (
+                  <div className="text-center py-8 text-slate-400">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">All caught up!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </ThemeBackground>
+    </div>
+  )
+}

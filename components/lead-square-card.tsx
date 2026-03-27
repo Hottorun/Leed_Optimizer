@@ -11,9 +11,9 @@ interface LeadSquareCardProps {
   isSelected: boolean
 }
 
-function getRatingColor(rating: boolean | undefined): string {
-  if (rating === true) return "text-primary"
-  if (rating === false) return "text-destructive"
+function getRatingColor(rating: number | undefined): string {
+  if (rating !== undefined && rating >= 3) return "text-primary"
+  if (rating !== undefined && rating < 3) return "text-destructive"
   return "text-chart-3"
 }
 
@@ -45,7 +45,7 @@ export function LeadSquareCard({ lead, onClick, isSelected }: LeadSquareCardProp
           "flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold transition-colors",
           sessionStatus === "completed" && "bg-primary/20 text-primary",
           sessionStatus === "active" && "bg-chart-3/20 text-chart-3",
-          sessionStatus === "forwarded" && "bg-purple-500/20 text-purple-600"
+          sessionStatus === "manual" && "bg-purple-500/20 text-purple-600"
         )}>
           {initials}
         </div>
@@ -80,8 +80,8 @@ export function LeadSquareCard({ lead, onClick, isSelected }: LeadSquareCardProp
           ) : (
             <AtSign className="h-3 w-3 text-blue-500" />
           )}
-          {lead.leadCount > 1 && (
-            lead.leadCount >= 3 ? (
+          {(lead.leadCount ?? 0) > 1 && (
+            (lead.leadCount ?? 0) >= 3 ? (
               <Heart className="h-3 w-3 text-red-500 fill-red-500" />
             ) : (
               <Users className="h-3 w-3 text-primary" />
@@ -94,7 +94,7 @@ export function LeadSquareCard({ lead, onClick, isSelected }: LeadSquareCardProp
         "absolute top-2 right-2 h-2 w-2 rounded-full",
         sessionStatus === "completed" && "bg-primary",
         sessionStatus === "active" && "bg-chart-3",
-        sessionStatus === "forwarded" && "bg-purple-500"
+        sessionStatus === "manual" && "bg-purple-500"
       )} />
     </button>
   )

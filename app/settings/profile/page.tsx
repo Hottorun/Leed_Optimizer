@@ -2,32 +2,86 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, User, Mail, Phone, MapPin, Camera, Save, Check } from "lucide-react"
+import { ArrowLeft, User, Mail, Camera, Save, Check, Loader2, Briefcase, Users } from "lucide-react"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { cn } from "@/lib/utils"
-import { useProfile } from "@/lib/use-profile"
+
+interface Profile {
+  firstName: string
+  lastName: string
+  email: string
+  industry: string
+  teamName: string
+}
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { profile: savedProfile, saveProfile, loading } = useProfile()
-  const [profile, setProfile] = useState(savedProfile)
+  const [profile, setProfile] = useState<Profile>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    industry: "",
+    teamName: "",
+  })
+  const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [avatar, setAvatar] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!loading) {
-      setProfile(savedProfile)
-    }
-  }, [loading, savedProfile])
+    fetch("/api/settings/profile")
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          setError(data.error)
+        } else if (data.name) {
+          const nameParts = data.name.split(" ")
+          const firstName = nameParts[0] || ""
+          const lastName = nameParts.slice(1).join(" ") || ""
+          setProfile({
+            firstName,
+            lastName,
+            email: data.email || "",
+            industry: data.industry || "",
+            teamName: data.teamName || "",
+          })
+        } else if (data.email) {
+          setProfile(prev => ({ ...prev, email: data.email, teamName: data.teamName || "" }))
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load profile:", err)
+        setError("Failed to load profile")
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   const handleSave = async () => {
     setIsSaving(true)
-    saveProfile(profile)
-    await new Promise(resolve => setTimeout(resolve, 500))
-    setIsSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setError(null)
+    try {
+      const fullName = `${profile.firstName} ${profile.lastName}`.trim()
+      const res = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fullName,
+          industry: profile.industry,
+        }),
+      })
+      if (res.ok) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+      } else {
+        setError("Failed to save profile")
+      }
+    } catch (err) {
+      console.error("Failed to save:", err)
+      setError("Failed to save profile")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,6 +93,18 @@ export default function ProfilePage() {
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  if (loading) {
+    return (
+      <ThemeBackground className="p-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+          </div>
+        </div>
+      </ThemeBackground>
+    )
   }
 
   return (
@@ -59,11 +125,21 @@ export default function ProfilePage() {
           </div>
 
           <div className="p-6 space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="flex flex-col items-center">
               <div className="relative">
                 <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
                   {avatar ? (
                     <img src={avatar} alt="Profile" className="h-full w-full object-cover" />
+                  ) : profile.firstName || profile.lastName ? (
+                    <span className="text-2xl font-medium text-blue-600">
+                      {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
+                    </span>
                   ) : (
                     <User className="h-10 w-10 text-blue-600" />
                   )}
@@ -111,48 +187,43 @@ export default function ProfilePage() {
                 <input
                   type="email"
                   value={profile.email}
-                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  disabled
+                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
                 />
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               </div>
+              <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-              <div className="relative">
-                <input
-                  type="tel"
-                  value={profile.phone}
-                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Industry</label>
               <div className="relative">
                 <input
                   type="text"
-                  value={profile.location}
-                  onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                  value={profile.industry}
+                  onChange={(e) => setProfile({ ...profile, industry: e.target.value })}
+                  placeholder="e.g., Construction, Real Estate, Healthcare"
                   className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
-              <input
-                type="text"
-                value={profile.company}
-                onChange={(e) => setProfile({ ...profile, company: e.target.value })}
-                className="w-full h-10 px-4 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
+            {profile.teamName && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Team</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={profile.teamName}
+                    disabled
+                    className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                  />
+                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Team cannot be changed</p>
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
               <button

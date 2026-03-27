@@ -2,18 +2,18 @@ export type LeadStatus = "pending" | "approved" | "declined" | "manual" | "activ
 export type LeadSource = "whatsapp" | "email"
 
 export interface LeadSession {
-  id: string
-  createdAt: string
-  teamsId: string
-  leadsId: string
-  status: "active" | "completed" | "cancelled"
+  id?: string
+  createdAt?: string
+  teamsId?: string
+  leadsId?: string
+  status: LeadStatus
   currentStep: string
-  collectedData: CollectedData
-  needsMoreInfo: boolean
+  collectedData?: CollectedData
+  needsMoreInfo?: boolean
   rating?: number
   ratingReason?: string
   forwardedAt?: string
-  updatedAt: string
+  updatedAt?: string
   aiRecommendation?: string
   conversionProbability?: number
   dealValue?: number
@@ -46,7 +46,7 @@ export interface Lead {
   declineMessage?: string
   rating?: number
   ratingReason?: string
-  status: LeadStatus
+  status?: LeadStatus
   source?: LeadSource
   isLoyal?: boolean
   createdAt: string
@@ -56,6 +56,7 @@ export interface Lead {
   autoApproved?: boolean
   lastContactedAt?: string
   session?: LeadSession
+  collectedData?: CollectedData
 }
 
 export type TeamRole = "owner" | "admin" | "member"
@@ -95,6 +96,24 @@ export interface AppSettings {
   defaultDeclineMessage: string
   defaultUnrelatedMessage: string
   language: "de" | "en"
+  theme?: string
+  notificationsEnabled?: boolean
+  notifyNewLeads?: boolean
+  notifyLeadApproved?: boolean
+  notifyLeadDeclined?: boolean
+  notifyManualReview?: boolean
+  notifyDailySummary?: boolean
+  notifyWeeklyReport?: boolean
+  aiEnabled?: boolean
+  autoApprove?: boolean
+  autoDecline?: boolean
+  autoManualReview?: boolean
+  minRatingThreshold?: number
+  autoResponseEnabled?: boolean
+  sentimentAnalysis?: boolean
+  priorityDetection?: boolean
+  duplicateDetection?: boolean
+  aiInstructions?: string
 }
 
 export interface Message {
@@ -105,6 +124,58 @@ export interface Message {
   leadsSessionsId?: string
   direction: "incoming" | "outgoing"
   text?: string
+}
+
+export type ContactPlatform = "whatsapp" | "email" | "sms" | "telegram"
+
+export interface TeamSettings {
+  teamId?: string
+  autoDeleteDeclinedDays?: number
+  webhookUrl?: string
+  autoApproveEnabled?: boolean
+  autoApproveMinRating?: number
+  autoDeclineUnrelated?: boolean
+  followUpDays?: number
+  followUpMessage?: string
+  defaultApproveMessage?: string
+  defaultDeclineMessage?: string
+  defaultUnrelatedMessage?: string
+  language?: "de" | "en"
+  notificationsEnabled?: boolean
+  notifyNewLeads?: boolean
+  notifyLeadApproved?: boolean
+  notifyLeadDeclined?: boolean
+  notifyManualReview?: boolean
+  notifyDailySummary?: boolean
+  notifyWeeklyReport?: boolean
+  aiEnabled?: boolean
+  autoApprove?: boolean
+  autoDecline?: boolean
+  autoManualReview?: boolean
+  minRatingThreshold?: number
+  autoResponseEnabled?: boolean
+  sentimentAnalysis?: boolean
+  priorityDetection?: boolean
+  duplicateDetection?: boolean
+  aiInstructions?: string
+}
+
+export interface UserSettings {
+  userId?: string
+  theme?: string
+  language?: string
+  notifications?: {
+    email: boolean
+    push: boolean
+    sms: boolean
+  }
+  notificationsEnabled?: boolean
+  notifyNewLeads?: boolean
+  notifyLeadApproved?: boolean
+  notifyLeadDeclined?: boolean
+  notifyManualReview?: boolean
+  notifyDailySummary?: boolean
+  notifyWeeklyReport?: boolean
 }
 
 export interface LeadStats {

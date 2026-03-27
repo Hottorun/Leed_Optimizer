@@ -2,69 +2,145 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Bot, Check, AlertTriangle, Zap, MessageSquare, Star, Filter, Brain, Sliders, Shield } from "lucide-react"
+import { ArrowLeft, Bot, Check, AlertTriangle, Zap, MessageSquare, Star, Filter, Brain, Sliders, Shield, Loader2 } from "lucide-react"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { cn } from "@/lib/utils"
+import { useUser } from "@/lib/use-user"
+import type { TeamSettings } from "@/lib/types"
 
 export default function AISettingsPage() {
   const router = useRouter()
+  const { user, loading: userLoading } = useUser()
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null)
-  const [preferences, setPreferences] = useState({
-    aiEnabled: true,
-    autoApprove: false,
-    autoDecline: false,
-    autoManualReview: true,
-    minRatingThreshold: 3,
-    autoResponseEnabled: false,
-    sentimentAnalysis: true,
-    priorityDetection: true,
-    duplicateDetection: true,
-  })
-  const [aiInstructions, setAiInstructions] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [preferences, setPreferences] = useState<TeamSettings | null>(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem("aiPreferences")
-    if (saved) {
-      setPreferences(JSON.parse(saved))
+    if (!userLoading && !user) {
+      router.push("/login")
     }
-    const savedInstructions = localStorage.getItem("aiInstructions")
-    if (savedInstructions) {
-      setAiInstructions(savedInstructions)
-    }
-  }, [])
+  }, [user, userLoading, router])
+
+  useEffect(() => {
+    if (!user?.teamId) return
+
+    fetch("/api/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          setPreferences({
+            autoDeleteDeclinedDays: data.autoDeleteDeclinedDays ?? 0,
+            autoApproveEnabled: data.autoApproveEnabled ?? false,
+            autoDeclineUnrelated: data.autoDeclineUnrelated ?? false,
+            followUpDays: data.followUpDays ?? 3,
+            followUpMessage: data.followUpMessage ?? "",
+            aiEnabled: data.aiEnabled ?? true,
+            autoApprove: data.autoApprove ?? false,
+            autoDecline: data.autoDecline ?? false,
+            autoManualReview: data.autoManualReview ?? true,
+            minRatingThreshold: data.minRatingThreshold ?? 3,
+            autoResponseEnabled: data.autoResponseEnabled ?? false,
+            sentimentAnalysis: data.sentimentAnalysis ?? true,
+            priorityDetection: data.priorityDetection ?? true,
+            duplicateDetection: data.duplicateDetection ?? true,
+            aiInstructions: data.aiInstructions ?? "",
+          })
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false))
+  }, [user?.teamId])
 
   const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
   }
 
-  const handleToggle = (key: keyof typeof preferences) => {
+  const handleToggle = async (key: keyof TeamSettings) => {
+    if (!preferences || !user?.teamId) return
+
     const newPrefs = { ...preferences, [key]: !preferences[key] }
     setPreferences(newPrefs)
-    localStorage.setItem("aiPreferences", JSON.stringify(newPrefs))
-    showToast("AI preferences saved", "success")
+
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: !preferences[key] })
+      })
+      if (res.ok) {
+        showToast("AI preference saved", "success")
+      } else {
+        showToast("Failed to save", "error")
+      }
+    } catch {
+      showToast("Error saving", "error")
+    }
   }
 
-  const handleRatingChange = (value: number) => {
+  const handleRatingChange = async (value: number) => {
+    if (!preferences || !user?.teamId) return
+
     const newPrefs = { ...preferences, minRatingThreshold: value }
     setPreferences(newPrefs)
-    localStorage.setItem("aiPreferences", JSON.stringify(newPrefs))
-    showToast("Rating threshold updated", "success")
+
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minRatingThreshold: value })
+      })
+      if (res.ok) {
+        showToast("Rating threshold updated", "success")
+      }
+    } catch {
+      showToast("Error saving", "error")
+    }
   }
 
   const handleInstructionsChange = (value: string) => {
-    setAiInstructions(value)
-    localStorage.setItem("aiInstructions", value)
+    setPreferences({ ...preferences!, aiInstructions: value })
   }
 
-  const handleSaveAll = () => {
-    localStorage.setItem("aiPreferences", JSON.stringify(preferences))
-    localStorage.setItem("aiInstructions", aiInstructions)
-    showToast("All AI settings saved successfully", "success")
+  const handleSaveAll = async () => {
+    if (!preferences || !user?.teamId) return
+
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aiEnabled: preferences.aiEnabled,
+          autoApprove: preferences.autoApprove,
+          autoDecline: preferences.autoDecline,
+          autoManualReview: preferences.autoManualReview,
+          minRatingThreshold: preferences.minRatingThreshold,
+          autoResponseEnabled: preferences.autoResponseEnabled,
+          sentimentAnalysis: preferences.sentimentAnalysis,
+          priorityDetection: preferences.priorityDetection,
+          duplicateDetection: preferences.duplicateDetection,
+          aiInstructions: preferences.aiInstructions,
+        })
+      })
+      if (res.ok) {
+        showToast("All AI settings saved successfully", "success")
+      } else {
+        showToast("Failed to save", "error")
+      }
+    } catch {
+      showToast("Error saving", "error")
+    }
   }
 
-  const handleResetDefaults = () => {
-    const defaultPrefs = {
+  const handleResetDefaults = async () => {
+    if (!preferences || !user?.teamId) return
+
+    const defaultPrefs: TeamSettings = {
+      autoDeleteDeclinedDays: 0,
+      autoApproveEnabled: false,
+      autoDeclineUnrelated: false,
+      followUpDays: 3,
+      followUpMessage: "",
       aiEnabled: true,
       autoApprove: false,
       autoDecline: false,
@@ -74,12 +150,52 @@ export default function AISettingsPage() {
       sentimentAnalysis: true,
       priorityDetection: true,
       duplicateDetection: true,
+      aiInstructions: "",
     }
     setPreferences(defaultPrefs)
-    setAiInstructions("")
-    localStorage.setItem("aiPreferences", JSON.stringify(defaultPrefs))
-    localStorage.setItem("aiInstructions", "")
-    showToast("AI settings reset to defaults", "success")
+
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aiEnabled: defaultPrefs.aiEnabled,
+          autoApprove: defaultPrefs.autoApprove,
+          autoDecline: defaultPrefs.autoDecline,
+          autoManualReview: defaultPrefs.autoManualReview,
+          minRatingThreshold: defaultPrefs.minRatingThreshold,
+          autoResponseEnabled: defaultPrefs.autoResponseEnabled,
+          sentimentAnalysis: defaultPrefs.sentimentAnalysis,
+          priorityDetection: defaultPrefs.priorityDetection,
+          duplicateDetection: defaultPrefs.duplicateDetection,
+          aiInstructions: defaultPrefs.aiInstructions,
+          autoDeleteDeclinedDays: defaultPrefs.autoDeleteDeclinedDays,
+          autoApproveEnabled: defaultPrefs.autoApproveEnabled,
+          autoDeclineUnrelated: defaultPrefs.autoDeclineUnrelated,
+          followUpDays: defaultPrefs.followUpDays,
+          followUpMessage: defaultPrefs.followUpMessage,
+        })
+      })
+      if (res.ok) {
+        showToast("AI settings reset to defaults", "success")
+      }
+    } catch {
+      showToast("Error resetting", "error")
+    }
+  }
+
+  if (userLoading || isLoading || !preferences) {
+    return (
+      <ThemeBackground>
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        </div>
+      </ThemeBackground>
+    )
+  }
+
+  if (!user) {
+    return null
   }
 
   const autoActionOptions = [
@@ -268,7 +384,7 @@ export default function AISettingsPage() {
                           disabled={!preferences.aiEnabled}
                           className={cn(
                             "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition-colors cursor-pointer",
-                            preferences.minRatingThreshold >= rating
+                            (preferences.minRatingThreshold ?? 0) >= rating
                               ? "bg-amber-400 text-white"
                               : "bg-slate-100 text-slate-400 hover:bg-slate-200",
                             !preferences.aiEnabled && "opacity-50 cursor-not-allowed"
@@ -397,7 +513,7 @@ export default function AISettingsPage() {
                     </div>
                   </div>
                   <textarea
-                    value={aiInstructions}
+                    value={preferences.aiInstructions || ""}
                     onChange={(e) => handleInstructionsChange(e.target.value)}
                     disabled={!preferences.aiEnabled}
                     placeholder="E.g., Always prioritize leads from Los Angeles, decline inquiries for projects under $1000, flag leads mentioning 'urgent' as high priority..."

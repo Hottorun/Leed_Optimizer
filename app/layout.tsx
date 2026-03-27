@@ -32,11 +32,6 @@ export const metadata: Metadata = {
   },
 }
 
-function getInitialTheme(): string {
-  if (typeof window === 'undefined') return 'light'
-  return localStorage.getItem('theme') || 'light'
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,7 +42,7 @@ export default function RootLayout({
       <body className={`${dmSans.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme={getInitialTheme()}
+          defaultTheme="light"
           enableSystem={false}
           disableTransitionOnChange
         >

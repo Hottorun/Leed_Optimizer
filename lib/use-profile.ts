@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useUser } from "./use-user"
 
 export interface Profile {
   firstName: string
@@ -11,36 +12,71 @@ export interface Profile {
   company: string
 }
 
-const STORAGE_KEY = "aclea_profile"
-
 const defaultProfile: Profile = {
-  firstName: "Admin",
-  lastName: "User",
-  email: "admin@aclea.com",
-  phone: "+1 555 123 4567",
-  location: "Los Angeles, CA",
-  company: "Aclea Inc.",
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  location: "",
+  company: "",
 }
 
 export function useProfile() {
+  const { user } = useUser()
   const [profile, setProfile] = useState<Profile>(defaultProfile)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        setProfile(JSON.parse(stored))
-      } catch (e) {
-        console.error("Failed to parse profile:", e)
-      }
+    if (!user?.id) {
+      setLoading(false)
+      return
     }
-    setLoading(false)
-  }, [])
 
-  const saveProfile = (newProfile: Profile) => {
-    setProfile(newProfile)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newProfile))
+    fetch("/api/settings/profile")
+      .then(res => res.json())
+      .then(data => {
+        if (data.name) {
+          const nameParts = data.name.split(" ")
+          const firstName = nameParts[0] || ""
+          const lastName = nameParts.slice(1).join(" ") || ""
+          setProfile({
+            firstName,
+            lastName,
+            email: data.email || "",
+            phone: data.phone || "",
+            location: data.location || "",
+            company: data.company || "",
+          })
+        } else if (data.email) {
+          setProfile(prev => ({ ...prev, email: data.email }))
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [user?.id])
+
+  const saveProfile = async (newProfile: Profile): Promise<boolean> => {
+    try {
+      const fullName = `${newProfile.firstName} ${newProfile.lastName}`.trim()
+      const res = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fullName,
+          phone: newProfile.phone,
+          location: newProfile.location,
+          company: newProfile.company,
+        }),
+      })
+      if (res.ok) {
+        setProfile(newProfile)
+        return true
+      }
+      return false
+    } catch (err) {
+      console.error("Failed to save profile:", err)
+      return false
+    }
   }
 
   return { profile, saveProfile, loading }

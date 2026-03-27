@@ -16,10 +16,10 @@ const statusConfig: Record<LeadStatus, { label: string; className: string }> = {
   pending: { label: "Pending", className: "bg-chart-3/20 text-chart-3 border-chart-3/30" },
   approved: { label: "Approved", className: "bg-primary/20 text-primary border-primary/30" },
   declined: { label: "Declined", className: "bg-destructive/20 text-destructive border-destructive/30" },
-  unrelated: { label: "Unrelated", className: "bg-muted/50 text-muted-foreground border-muted" },
+  manual: { label: "Review", className: "bg-violet-500/20 text-violet-600 border-violet-500/30" },
   active: { label: "Active", className: "bg-blue-500/20 text-blue-600 border-blue-500/30" },
-  forwarded: { label: "Forwarded", className: "bg-purple-500/20 text-purple-600 border-purple-500/30" },
   completed: { label: "Completed", className: "bg-green-500/20 text-green-600 border-green-500/30" },
+  cancelled: { label: "Cancelled", className: "bg-slate-400/20 text-slate-500 border-slate-400/30" },
 }
 
 function formatDate(dateString: string): string {
@@ -41,9 +41,9 @@ function formatRelativeDate(dateString: string): string {
   return format(date, "MMM d")
 }
 
-function getRatingColor(rating: boolean | undefined): string {
-  if (rating === true) return "text-primary"
-  if (rating === false) return "text-destructive"
+function getRatingColor(rating: number | undefined): string {
+  if (rating !== undefined && rating >= 3) return "text-primary"
+  if (rating !== undefined && rating < 3) return "text-destructive"
   return "text-chart-3"
 }
 
@@ -71,7 +71,7 @@ export function LeadListItem({ lead, onClick, isSelected }: LeadListItemProps) {
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
           sessionStatus === "completed" && "bg-primary/20 text-primary",
           sessionStatus === "active" && "bg-chart-3/20 text-chart-3",
-          sessionStatus === "forwarded" && "bg-purple-500/20 text-purple-600"
+          sessionStatus === "manual" && "bg-purple-500/20 text-purple-600"
         )}>
           {lead.name
             .split(" ")
@@ -112,12 +112,12 @@ export function LeadListItem({ lead, onClick, isSelected }: LeadListItemProps) {
               <AtSign className="h-3 w-3" />
             )}
           </Badge>
-          {lead.leadCount >= 3 && (
+          {(lead.leadCount ?? 0) >= 3 && (
             <Badge variant="secondary" className="text-xs bg-red-500/10 text-red-600">
               <Heart className="h-3 w-3 fill-red-500" />
             </Badge>
           )}
-          {lead.leadCount > 1 && lead.leadCount < 3 && (
+          {(lead.leadCount ?? 0) > 1 && (lead.leadCount ?? 0) < 3 && (
             <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
               <Users className="h-3 w-3" />
             </Badge>

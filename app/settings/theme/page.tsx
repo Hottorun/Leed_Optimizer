@@ -2,34 +2,55 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Check, Moon, Sun, Palette } from "lucide-react"
+import { ArrowLeft, Check, Moon, Sun, Palette, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useUser } from "@/lib/use-user"
+import { useTheme } from "next-themes"
+import type { UserSettings } from "@/lib/types"
 
 type UIStyle = "colored" | "minimal"
 
 export default function ThemePage() {
   const router = useRouter()
+  const { user, loading: userLoading } = useUser()
+  const { setTheme, theme } = useTheme()
   const [selectedStyle, setSelectedStyle] = useState<UIStyle>("colored")
   const [selectedMode, setSelectedMode] = useState<"light" | "dark">("light")
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    const savedStyle = localStorage.getItem("uiStyle") as UIStyle | null
-    const savedMode = localStorage.getItem("mode") | null
-    if (savedStyle) setSelectedStyle(savedStyle)
-    if (savedMode) setSelectedMode(savedMode as "light" | "dark")
-  }, [])
-
-  const applyTheme = (style: UIStyle, mode: "light" | "dark") => {
-    localStorage.setItem("uiStyle", style)
-    localStorage.setItem("mode", mode)
-    document.documentElement.setAttribute("data-theme", style)
-    document.documentElement.setAttribute("data-mode", mode)
-    if (mode === "dark") {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
+    if (!userLoading && !user) {
+      router.push("/login")
     }
+  }, [user, userLoading, router])
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    fetch("/api/settings/user")
+      .then(res => res.json())
+      .then((data) => {
+        if (data && typeof data === 'object' && 'theme' in data) {
+          const mode = data.theme || "light"
+          setSelectedMode(mode)
+          setTheme(mode)
+          
+          const savedStyle = localStorage.getItem("uiStyle") as UIStyle | null
+          if (savedStyle) {
+            setSelectedStyle(savedStyle)
+            applyStyle(savedStyle)
+          }
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false))
+  }, [user?.id, setTheme])
+
+  const applyStyle = (style: UIStyle) => {
+    localStorage.setItem("uiStyle", style)
+    document.documentElement.setAttribute("data-theme", style)
     if (style === "minimal") {
       document.documentElement.classList.add("ui-minimal")
     } else {
@@ -37,23 +58,57 @@ export default function ThemePage() {
     }
   }
 
+  const applyTheme = (mode: "light" | "dark") => {
+    setSelectedMode(mode)
+    setTheme(mode)
+  }
+
   const handleStyleChange = (style: UIStyle) => {
     setSelectedStyle(style)
-    applyTheme(style, selectedMode)
+    applyStyle(style)
   }
 
   const handleModeChange = (mode: "light" | "dark") => {
-    setSelectedMode(mode)
-    applyTheme(selectedStyle, mode)
+    applyTheme(mode)
   }
 
-  const handleSave = () => {
-    applyTheme(selectedStyle, selectedMode)
-    setSaved(true)
-    setTimeout(() => {
-      setSaved(false)
-      router.push("/settings")
-    }, 1500)
+  const handleSave = async () => {
+    if (!user?.id) return
+
+    setIsSaving(true)
+    try {
+      const res = await fetch("/api/settings/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme: selectedMode,
+        })
+      })
+
+      if (res.ok) {
+        setSaved(true)
+        setTimeout(() => {
+          setSaved(false)
+          router.push("/settings")
+        }, 1500)
+      }
+    } catch {
+      console.error("Failed to save theme")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (userLoading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
@@ -190,14 +245,18 @@ export default function ThemePage() {
               </button>
               <button
                 onClick={handleSave}
+                disabled={isSaving}
                 className={cn(
                   "px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 cursor-pointer",
                   saved 
                     ? "bg-emerald-600 text-white" 
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-blue-600 text-white hover:bg-blue-700",
+                  isSaving && "opacity-50"
                 )}
               >
-                {saved ? (
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : saved ? (
                   <>
                     <Check className="h-4 w-4" />
                     Saved!

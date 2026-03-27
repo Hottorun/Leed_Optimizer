@@ -157,7 +157,7 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
                     <p className="font-medium text-amber-500">Existing Lead Found</p>
                     <p className="text-muted-foreground">
                       This phone number belongs to <span className="font-medium">{existingLead.name}</span>. 
-                      This will be lead #{existingLead.leadCount + 1} from this customer.
+                      This will be lead #{(existingLead.leadCount ?? 0) + 1} from this customer.
                     </p>
                   </div>
                 </div>

@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/app-header"
 import { LeadDetailPanel } from "@/components/lead-detail-panel"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { cn } from "@/lib/utils"
+import { useTheme } from "next-themes"
 import { 
   Zap, TrendingUp, Clock, Heart, Star, ArrowRight,
   ChevronRight, Sparkles, Target, AlertCircle, CheckCircle
@@ -40,6 +41,7 @@ const gradientKeyframes = `
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { theme } = useTheme()
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -196,7 +198,7 @@ export default function DashboardPage() {
     >
       <div className="flex items-center gap-3">
         {index !== undefined && (
-          <div className={cn("flex h-8 w-8 items-center justify-center rounded-full text-white text-sm font-bold", uiStyle === "minimal" ? "bg-gradient-to-br from-slate-700 to-slate-800" : "bg-gradient-to-br from-blue-500 to-purple-500")}>
+			<div className="flex h-8 w-8 items-center justify-center rounded-full text-white text-sm font-bold" style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1, #a855f7)' }}>
             {index + 1}
           </div>
         )}
@@ -217,7 +219,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-1">
           {[...Array(5)].map((_, i) => (
             <Star key={i} className={cn(
-              "h-3.5 w-3.5", i < getRating(lead) ? "text-slate-500 fill-slate-500" : "text-slate-300"
+              "h-3.5 w-3.5", i < getRating(lead) ? "text-yellow-400 fill-yellow-400" : "text-slate-600 dark:text-slate-500"
             )} />
           ))}
         </div>
@@ -226,21 +228,21 @@ export default function DashboardPage() {
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className={cn(
           "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border",
-          uiStyle === "minimal"
-            ? "border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-600"
+          uiStyle === "minimal" || theme === "dark"
+            ? "border-indigo-500/50 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-400"
             : getRating(lead) >= 4 
               ? "border-indigo-200 bg-indigo-50 text-indigo-600" 
               : getRating(lead) >= 3 
                 ? "border-blue-200 bg-blue-50 text-blue-600"
                 : "border-slate-200 bg-slate-50 text-slate-500"
         )}>
-          <Sparkles className={cn("h-3 w-3", uiStyle === "minimal" ? "text-indigo-500" : "")} />
+          <Sparkles className={cn("h-3 w-3", uiStyle === "minimal" || theme === "dark" ? "text-indigo-400" : "")} />
           {getRating(lead) >= 4 ? "High priority" : getRating(lead) >= 3 ? "Medium priority" : "Nurture"}
         </span>
         <span className={cn(
           "text-xs font-medium",
-          uiStyle === "minimal"
-            ? "text-indigo-600"
+          uiStyle === "minimal" || theme === "dark"
+            ? "text-indigo-400"
             : getRating(lead) >= 4 
               ? "text-indigo-500" 
               : getRating(lead) >= 3 
@@ -254,7 +256,7 @@ export default function DashboardPage() {
   return (
     <div key={user.id}>
       <style dangerouslySetInnerHTML={{ __html: gradientKeyframes }} />
-      <AppHeader onRefresh={() => {}} isRefreshing={false} user={{ name: user.name, email: user.email }} />
+      <AppHeader onRefresh={() => {}} isRefreshing={false} user={{ name: user.name, email: user.email }} leads={leads} />
       <ThemeBackground>
         {selectedLead && (
           <LeadDetailPanel
@@ -283,7 +285,7 @@ export default function DashboardPage() {
 
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
             <div className="flex flex-col md:flex-row">
-              <div className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1">
+              <Link href="/leads" className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
                 <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
                   <Target className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
                 </div>
@@ -291,8 +293,8 @@ export default function DashboardPage() {
                   <p className="text-sm text-slate-500 dark:text-slate-400">Total Leads</p>
                   <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.totalLeads}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1">
+              </Link>
+              <Link href="/leads?sort=newest" className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
                 <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
                   <TrendingUp className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
                 </div>
@@ -300,8 +302,8 @@ export default function DashboardPage() {
                   <p className="text-sm text-slate-500 dark:text-slate-400">New Today</p>
                   <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.newToday}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1">
+              </Link>
+              <Link href="/leads?tab=action" className="flex items-center gap-4 px-6 py-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
                 <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
                   <Clock className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
                 </div>
@@ -309,8 +311,8 @@ export default function DashboardPage() {
                   <p className="text-sm text-slate-500 dark:text-slate-400">Needs Review</p>
                   <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.pending}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-4 px-6 py-5 flex-1">
+              </Link>
+              <Link href="/leads?filter=approved" className="flex items-center gap-4 px-6 py-5 flex-1 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
                 <div className="p-3 rounded-xl bg-slate-200 dark:bg-slate-700">
                   <CheckCircle className={cn("h-6 w-6", uiStyle === "minimal" ? "text-slate-700" : "text-slate-600 dark:text-slate-300")} />
                 </div>
@@ -318,7 +320,7 @@ export default function DashboardPage() {
                   <p className="text-sm text-slate-500 dark:text-slate-400">Approved</p>
                   <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.approved}</p>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
 
@@ -352,19 +354,19 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className={cn("p-5 border-b border-slate-100 dark:border-slate-700", uiStyle === "minimal" ? "bg-slate-100" : "bg-amber-50/30")}>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className={cn("p-5 border-b border-slate-100 dark:border-slate-700", uiStyle === "minimal" || theme === "dark" ? "bg-transparent" : "bg-amber-50/30")}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-lg", uiStyle === "minimal" ? "bg-slate-300" : "bg-amber-100")}>
-                      <AlertCircle className={cn("h-5 w-5", uiStyle === "minimal" ? "text-slate-700" : "text-amber-600")} />
+                    <div className={cn("p-2 rounded-lg", uiStyle === "minimal" || theme === "dark" ? "bg-amber-900/50" : "bg-amber-100")}>
+                      <AlertCircle className={cn("h-5 w-5", uiStyle === "minimal" || theme === "dark" ? "text-amber-400" : "text-amber-600")} />
                     </div>
                     <div>
                       <h2 className="font-semibold text-slate-800 dark:text-slate-100">Needs Attention</h2>
-                      <p className="text-sm text-slate-500">Overdue or high-value leads</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Overdue or high-value leads</p>
                     </div>
                   </div>
-                  <Link href="/leads" className={cn("text-sm flex items-center gap-1", uiStyle === "minimal" ? "text-slate-700 hover:text-slate-800" : "text-amber-600 hover:text-amber-700")}>
+                  <Link href="/leads" className={cn("text-sm flex items-center gap-1", uiStyle === "minimal" || theme === "dark" ? "text-amber-400 hover:text-amber-300" : "text-amber-600 hover:text-amber-700")}>
                     View All <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>

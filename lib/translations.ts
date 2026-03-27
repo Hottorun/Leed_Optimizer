@@ -116,6 +116,7 @@ export const translations = {
     password: "Passwort",
     confirmPassword: "Passwort bestatigen",
     inviteCodeOptional: "Team-Einladungscode (optional)",
+    minLength: "Mindestens 8 Zeichen",
     
     // Auth
     signIn: "Anmelden",
@@ -139,6 +140,15 @@ export const translations = {
     alreadyHaveAccount: "Bereits ein Konto?",
     passwordStrength: "Passwortstärke",
     passwordsDoNotMatch: "Die Passwörter stimmen nicht überein",
+    resetPassword: "Passwort zurucksetzen",
+    enterNewPassword: "Geben Sie Ihr neues Passwort ein",
+    newPassword: "Neues Passwort",
+    passwordResetSuccess: "Passwort erfolgreich zuruckgesetzt",
+    passwordResetFailed: "Passwort konnte nicht zuruckgesetzt werden",
+    tokenExpired: "Der Link ist abgelaufen",
+    invalidToken: "Ungultiger Link",
+    resetEmailSent: "Passwort-Zurucksetz-E-Mail gesendet",
+    checkEmail: "Prufen Sie Ihr E-Mail-Fach fur den Link zum Zurucksetzen des Passworts",
     
     // Stats
     totalLeads: "Gesamte Leads",
@@ -263,6 +273,7 @@ export const translations = {
     password: "Password",
     confirmPassword: "Confirm Password",
     inviteCodeOptional: "Team Invite Code (optional)",
+    minLength: "At least 8 characters",
     
     // Auth
     signIn: "Sign In",
@@ -276,7 +287,6 @@ export const translations = {
     
     // Password Requirements
     passwordStrength: "Password Strength",
-    minLength: "At least 8 characters",
     hasUppercase: "One uppercase letter",
     hasLowercase: "One lowercase letter",
     hasNumber: "One number",
@@ -298,6 +308,15 @@ export const translations = {
     haveInviteCode: "Have an invite code from your team? Enter it here.",
     alreadyHaveAccount: "Already have an account?",
     passwordsDoNotMatch: "Passwords do not match",
+    resetPassword: "Reset Password",
+    enterNewPassword: "Enter your new password",
+    newPassword: "New Password",
+    passwordResetSuccess: "Password reset successfully",
+    passwordResetFailed: "Failed to reset password",
+    tokenExpired: "Link has expired",
+    invalidToken: "Invalid link",
+    resetEmailSent: "Password reset email sent",
+    checkEmail: "Check your email for the password reset link",
     
     // Stats
     totalLeads: "Total Leads",

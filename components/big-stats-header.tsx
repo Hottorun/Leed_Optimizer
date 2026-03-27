@@ -13,9 +13,9 @@ interface BigStatsHeaderProps {
 }
 
 export function BigStatsHeader({ leads, onFilterClick, activeFilter, companyName }: BigStatsHeaderProps) {
-  const { gradientColors, currentTheme } = useThemeGradient()
+  const { gradientColors, currentUIStyle } = useThemeGradient()
   
-  const theme = currentTheme && gradientColors[currentTheme] ? currentTheme : "blue"
+  const theme = "blue"
   const colors = gradientColors[theme] || { from: "#f8fafc", to: "#e2e8f0" }
 
   const getStatus = (lead: Lead): string => {
@@ -25,45 +25,24 @@ export function BigStatsHeader({ leads, onFilterClick, activeFilter, companyName
   const pending = leads.filter((l) => getStatus(l) === "pending").length
   const approved = leads.filter((l) => getStatus(l) === "approved").length
   const declined = leads.filter((l) => getStatus(l) === "declined").length
-  const active = leads.filter((l) => getStatus(l) === "active").length
-  const manual = leads.filter((l) => getStatus(l) === "manual").length
+  const review = leads.filter((l) => getStatus(l) === "manual").length
   const whatsapp = leads.filter((l) => l.source === "whatsapp").length
   const email = leads.filter((l) => l.source === "email").length
 
-  const stats = [
-    {
-      label: "Pending",
-      value: pending,
-      icon: Clock,
-      filter: "pending" as LeadStatus,
-    },
-    {
-      label: "Manual",
-      value: manual,
-      icon: UserCheck,
-      filter: "manual" as LeadStatus,
-    },
-    {
-      label: "Approved",
-      value: approved,
-      icon: CheckCircle,
-      filter: "approved" as LeadStatus,
-    },
-    {
-      label: "Declined",
-      value: declined,
-      icon: XCircle,
-      filter: "declined" as LeadStatus,
-    },
-  ]
-
   const total = leads.length || 1
+
+  const stats = [
+    { icon: Clock, value: pending, label: "Pending", filter: "pending" as LeadStatus },
+    { icon: CheckCircle, value: approved, label: "Approved", filter: "approved" as LeadStatus },
+    { icon: XCircle, value: declined, label: "Declined", filter: "declined" as LeadStatus },
+    { icon: UserCheck, value: review, label: "Review", filter: "manual" as LeadStatus },
+  ]
 
   return (
     <div 
       className="border-b border-slate-300 dark:border-slate-700"
       style={{ 
-        background: theme === "minimal" 
+        background: currentUIStyle === "minimal" 
           ? undefined 
           : `linear-gradient(to bottom right, ${colors.from}, ${colors.to})` 
       }}

@@ -26,10 +26,18 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, Loader2, Link, Clock, AlertTriangle, Zap, Sparkles, Sun, Moon, Globe } from "lucide-react"
+import { Trash2, Loader2, Link, Clock, AlertTriangle, Zap, Sparkles, Sun, Moon, Globe, Users, UserPlus, UserMinus, Crown } from "lucide-react"
 import type { AppSettings } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
+
+interface TeamMember {
+  id: string
+  email: string
+  name: string
+  role: "owner" | "admin" | "member"
+  created_at: string
+}
 
 interface SettingsDialogProps {
   open: boolean
@@ -63,6 +71,10 @@ export function SettingsDialog({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeletingOld, setIsDeletingOld] = useState(false)
   const [deletedCount, setDeletedCount] = useState<number | null>(null)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+  const [newMember, setNewMember] = useState({ email: "", name: "", password: "", role: "member" as "admin" | "member" })
+  const [isAddingMember, setIsAddingMember] = useState(false)
   const { theme, setTheme } = useTheme()
 
   useEffect(() => {
@@ -116,6 +128,73 @@ export function SettingsDialog({
     }
   }
 
+  const fetchTeamMembers = async () => {
+    setIsLoadingMembers(true)
+    try {
+      const res = await fetch("/api/teams/members")
+      const data = await res.json()
+      if (data.members) {
+        setTeamMembers(data.members)
+      }
+    } catch (err) {
+      console.error("Failed to fetch team members:", err)
+    } finally {
+      setIsLoadingMembers(false)
+    }
+  }
+
+  const handleAddMember = async () => {
+    if (!newMember.email || !newMember.name || !newMember.password) return
+    setIsAddingMember(true)
+    try {
+      const res = await fetch("/api/teams/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMember),
+      })
+      if (res.ok) {
+        setNewMember({ email: "", name: "", password: "", role: "member" })
+        fetchTeamMembers()
+      }
+    } catch (err) {
+      console.error("Failed to add member:", err)
+    } finally {
+      setIsAddingMember(false)
+    }
+  }
+
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      const res = await fetch(`/api/teams/members?memberId=${memberId}`, { method: "DELETE" })
+      if (res.ok) {
+        setTeamMembers((prev) => prev.filter((m) => m.id !== memberId))
+      }
+    } catch (err) {
+      console.error("Failed to remove member:", err)
+    }
+  }
+
+  const handleUpdateRole = async (memberId: string, newRole: "admin" | "member") => {
+    try {
+      const res = await fetch("/api/teams/members", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, action: "updateRole", newRole }),
+      })
+      if (res.ok) {
+        fetchTeamMembers()
+      }
+    } catch (err) {
+      console.error("Failed to update role:", err)
+    }
+  }
+
+  useEffect(() => {
+    if (open && isAdminOrOwner) {
+      fetchTeamMembers()
+    }
+  }, [open, isAdminOrOwner])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -127,8 +206,14 @@ export function SettingsDialog({
         </DialogHeader>
 
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className={`grid w-full ${isAdminOrOwner ? "grid-cols-3" : "grid-cols-1"}`}>
+          <TabsList className={`grid w-full ${isAdminOrOwner ? "grid-cols-4" : "grid-cols-1"}`}>
             <TabsTrigger value="general" className="cursor-pointer">General</TabsTrigger>
+            {isAdminOrOwner && (
+              <TabsTrigger value="team" className="cursor-pointer">
+                <Users className="h-4 w-4 mr-1" />
+                Team
+              </TabsTrigger>
+            )}
             {isAdminOrOwner && (
               <TabsTrigger value="automation" className="cursor-pointer">
                 <Zap className="h-4 w-4 mr-1" />
@@ -277,7 +362,137 @@ export function SettingsDialog({
               )}
             </div>
           </TabsContent>
-          
+
+          {isAdminOrOwner && (
+            <TabsContent value="team" className="space-y-6 py-4">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Team Members</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Manage your team members and their access levels
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">Add New Member</Label>
+                <div className="grid gap-3">
+                  <Input
+                    placeholder="Email"
+                    value={newMember.email}
+                    onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                    className="cursor-pointer"
+                  />
+                  <Input
+                    placeholder="Name"
+                    value={newMember.name}
+                    onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                    className="cursor-pointer"
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={newMember.password}
+                    onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
+                    className="cursor-pointer"
+                  />
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={newMember.role}
+                      onChange={(e) => setNewMember({ ...newMember, role: e.target.value as "admin" | "member" })}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer"
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <Button
+                      onClick={handleAddMember}
+                      disabled={isAddingMember || !newMember.email || !newMember.name || !newMember.password}
+                      className="cursor-pointer"
+                    >
+                      {isAddingMember ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          Add
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Current Members</Label>
+                {isLoadingMembers ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : teamMembers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4">No team members found</p>
+                ) : (
+                  <div className="space-y-2">
+                    {teamMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center justify-between rounded-lg border border-border p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary">
+                            {member.role === "owner" ? (
+                              <Crown className="h-4 w-4 text-yellow-500" />
+                            ) : (
+                              <span className="text-sm font-medium">
+                                {member.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{member.name}</p>
+                            <p className="text-xs text-muted-foreground">{member.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {member.role !== "owner" && (
+                            <>
+                              {teamRole === "owner" && (
+                                <select
+                                  value={member.role}
+                                  onChange={(e) => handleUpdateRole(member.id, e.target.value as "admin" | "member")}
+                                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs cursor-pointer"
+                                >
+                                  <option value="member">Member</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveMember(member.id)}
+                                className="h-8 w-8 cursor-pointer text-destructive hover:text-destructive"
+                              >
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          {member.role === "owner" && (
+                            <span className="text-xs text-muted-foreground">Owner</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
+
           <TabsContent value="automation" className="space-y-6 py-4">
             {/* Auto-Approve Settings */}
             <div className="space-y-4">

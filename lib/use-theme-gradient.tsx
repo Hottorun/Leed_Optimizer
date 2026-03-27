@@ -54,7 +54,8 @@ function getInitialBackgroundStyle(): BackgroundStyle {
 
 function getInitialDarkMode(): boolean {
   if (typeof window === "undefined") return false
-  return localStorage.getItem("mode") === "dark" || document.documentElement.classList.contains("dark")
+  const theme = localStorage.getItem("theme")
+  return theme === "dark" || document.documentElement.classList.contains("dark")
 }
 
 export function useThemeGradient() {
@@ -94,7 +95,29 @@ export function useThemeGradient() {
 
 export function ThemeBackground({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   const { currentUIStyle } = useThemeGradient()
-  const isDark = getInitialDarkMode()
+  const [isDark, setIsDark] = useState(false)
+
+  useEffect(() => {
+    const checkDark = () => {
+      const storedTheme = localStorage.getItem("theme")
+      const hasDarkClass = document.documentElement.classList.contains("dark")
+      setIsDark(storedTheme === "dark" || hasDarkClass)
+    }
+    
+    checkDark()
+    
+    const observer = new MutationObserver(checkDark)
+    observer.observe(document.documentElement, { 
+      attributes: true, 
+      attributeFilter: ["class"] 
+    })
+    
+    window.addEventListener("storage", checkDark)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("storage", checkDark)
+    }
+  }, [])
 
   const getBackgroundStyle = (): React.CSSProperties => {
     if (isDark) return { background: "#0f172a" }

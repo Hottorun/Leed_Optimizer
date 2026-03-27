@@ -77,23 +77,24 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
   const sourceLabel = source === "whatsapp" ? "WhatsApp" : "Email"
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-xl">
-      <div className="flex items-center justify-between border-b border-slate-200 p-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-slate-800">Lead Details</h2>
-          <span className="text-xs text-slate-500 capitalize">{status}</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-200 p-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-slate-800">Lead Details</h2>
+            <span className="text-xs text-slate-500 capitalize">{status}</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+            className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onClose}
-          className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-      </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 max-h-[calc(90vh-80px)]">
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-xl font-semibold text-slate-600">
             {lead.name
@@ -288,6 +289,7 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
           )}
         </div>
       </div>
+    </div>
     </div>
   )
 }

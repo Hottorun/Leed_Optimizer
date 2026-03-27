@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import bcrypt from "bcryptjs"
+import { sendWelcomeEmail } from "@/lib/email"
 
 interface User {
   id: string
@@ -105,6 +106,8 @@ export async function POST(request: Request) {
         { status: 500 }
       )
     }
+
+    sendWelcomeEmail(email, name).catch(console.error)
 
     const user: User = {
       id: newUser.id,

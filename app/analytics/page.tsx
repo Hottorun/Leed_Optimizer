@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
 
   return (
     <ThemeBackground>
-      <AppHeader onRefresh={mutate} isRefreshing={isValidating} user={user ? { name: user.name, email: user.email } : undefined} />
+      <AppHeader onRefresh={mutate} isRefreshing={isValidating} user={user ? { name: user.name, email: user.email } : undefined} leads={leads} />
       <Analytics leads={leads} />
     </ThemeBackground>
   )

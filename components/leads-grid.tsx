@@ -21,15 +21,16 @@ export function LeadsGrid({
   viewMode = "grid",
 }: LeadsGridProps) {
   const sortByPriority = (a: Lead, b: Lead) => {
-    const aScore = a.rating * 10 + (a.status === "manual" ? 5 : 0) + (a.isLoyal ? 3 : 0)
-    const bScore = b.rating * 10 + (b.status === "manual" ? 5 : 0) + (b.isLoyal ? 3 : 0)
+    const aScore = (a.rating ?? 0) * 10 + (a.status === "manual" ? 5 : 0) + (a.isLoyal ? 3 : 0)
+    const bScore = (b.rating ?? 0) * 10 + (b.status === "manual" ? 5 : 0) + (b.isLoyal ? 3 : 0)
     return bScore - aScore
   }
 
   const getAiRec = (lead: Lead) => {
-    if (lead.rating >= 4) return { text: "High", color: "text-indigo-700", bg: "bg-indigo-50" }
+    const rating = lead.rating ?? 0
+    if (rating >= 4) return { text: "High", color: "text-indigo-700", bg: "bg-indigo-50" }
     if (lead.status === "manual") return { text: "Review", color: "text-indigo-600", bg: "bg-indigo-50" }
-    if (lead.rating >= 3) return { text: "Medium", color: "text-indigo-500", bg: "bg-indigo-50" }
+    if (rating >= 3) return { text: "Medium", color: "text-indigo-500", bg: "bg-indigo-50" }
     return { text: "Low", color: "text-indigo-400", bg: "bg-indigo-50" }
   }
 
@@ -41,9 +42,9 @@ export function LeadsGrid({
         lead.name.toLowerCase().includes(query) ||
         lead.phone.toLowerCase().includes(query) ||
         lead.email.toLowerCase().includes(query) ||
-        lead.location.toLowerCase().includes(query) ||
-        lead.workType.toLowerCase().includes(query) ||
-        lead.conversationSummary.toLowerCase().includes(query)
+        (lead.location?.toLowerCase().includes(query) ?? false) ||
+        (lead.workType?.toLowerCase().includes(query) ?? false) ||
+        (lead.conversationSummary?.toLowerCase().includes(query) ?? false)
       )
     })
     .sort(sortByPriority)
@@ -108,9 +109,9 @@ export function LeadsGrid({
                   lead.status === "approved" ? "bg-slate-500" :
                   lead.status === "manual" ? "bg-slate-600" : "bg-slate-400"
                 )} />
-                <span className="text-xs text-slate-500">{lead.status === "manual" ? "Review" : lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}</span>
+                <span className="text-xs text-slate-500">{lead.status === "manual" ? "Review" : (lead.status ?? "pending").charAt(0).toUpperCase() + (lead.status ?? "pending").slice(1)}</span>
               </div>
-              <p className="text-sm text-slate-500 truncate">{lead.workType} • {lead.location}</p>
+              <p className="text-sm text-slate-500 truncate">{lead.workType ?? "N/A"} • {lead.location ?? "N/A"}</p>
             </div>
 
             <div className="hidden md:flex items-center gap-4 text-sm text-slate-600">

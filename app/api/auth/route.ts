@@ -156,7 +156,15 @@ export async function GET() {
   }
 
   try {
-    const user = JSON.parse(token.value) as User
+    let user: User
+    try {
+      user = JSON.parse(token.value) as User
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid authentication token format" },
+        { status: 401 }
+      )
+    }
     
     // Refresh team info from database
     const supabase = getSupabase()

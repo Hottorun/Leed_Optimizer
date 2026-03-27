@@ -123,7 +123,7 @@ export function Dashboard() {
 
   return (
     <ThemeBackground>
-      <AppHeader onRefresh={handleRefresh} isRefreshing={isValidating} user={user ? { name: user.name, email: user.email } : undefined} />
+      <AppHeader onRefresh={handleRefresh} isRefreshing={isValidating} user={user ? { name: user.name, email: user.email } : undefined} leads={leads} />
       
       <BigStatsHeader 
         leads={leads} 

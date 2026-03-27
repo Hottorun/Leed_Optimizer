@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
-import type { Lead, AppSettings, LeadStatus, Team, TeamMember, TeamRole, LeadSession, Message, CollectedData } from "./types"
+import type { Lead, AppSettings, TeamSettings, UserSettings, LeadStatus, Team, TeamMember, TeamRole, LeadSession, Message, CollectedData } from "./types"
 import bcrypt from "bcryptjs"
 
 let supabase: SupabaseClient | null = null
@@ -41,13 +41,35 @@ let inMemorySettings: AppSettings = {
   defaultApproveMessage: "Thank you for your interest! We'd love to work with you.",
   defaultDeclineMessage: "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
   defaultUnrelatedMessage: "This message doesn't seem to be related to our services.",
+  theme: "light",
   language: "de",
+  notificationsEnabled: true,
+  notifyNewLeads: true,
+  notifyLeadApproved: true,
+  notifyLeadDeclined: true,
+  notifyManualReview: true,
+  notifyDailySummary: false,
+  notifyWeeklyReport: true,
+  aiEnabled: true,
+  autoApprove: false,
+  autoDecline: false,
+  autoManualReview: true,
+  minRatingThreshold: 3,
+  autoResponseEnabled: false,
+  sentimentAnalysis: true,
+  priorityDetection: true,
+  duplicateDetection: true,
+  aiInstructions: "",
 }
 
 export async function getLeads(teamId?: string): Promise<Lead[]> {
   const client = getSupabase()
   
+  console.log("getLeads called with teamId:", teamId)
+  console.log("Supabase client available:", !!client)
+  
   if (!client) {
+    console.log("No supabase client - using in-memory leads")
     let leads = inMemoryLeads
     if (teamId) {
       leads = leads.filter(lead => lead.teamId === teamId)
@@ -66,9 +88,12 @@ export async function getLeads(teamId?: string): Promise<Lead[]> {
     leadsQuery.eq("teams_id", teamId)
   }
 
-  console.log("getLeads: teamId =", teamId)
+  console.log("Fetching leads from database...")
   
   const { data: leadsData, error: leadsError } = await leadsQuery
+
+  console.log("Leads data:", leadsData)
+  console.log("Leads error:", leadsError)
 
   if (leadsError) {
     console.error("Error fetching leads:", leadsError)
@@ -76,8 +101,11 @@ export async function getLeads(teamId?: string): Promise<Lead[]> {
   }
 
   if (!leadsData || leadsData.length === 0) {
+    console.log("No leads found in database")
     return []
   }
+
+  console.log("Found", leadsData.length, "leads")
 
   const leadIds = leadsData.map(l => l.id)
 
@@ -86,6 +114,9 @@ export async function getLeads(teamId?: string): Promise<Lead[]> {
     .select("*")
     .in("leads_id", leadIds)
     .order("created_at", { ascending: false })
+
+  console.log("Sessions data:", sessionsData)
+  console.log("Sessions error:", sessionsError)
 
   if (sessionsError) {
     console.error("Error fetching sessions:", sessionsError)
@@ -420,7 +451,25 @@ export async function getSettings(teamId?: string): Promise<AppSettings> {
     defaultApproveMessage: data.default_approve_message || "Thank you for your interest! We'd love to work with you.",
     defaultDeclineMessage: data.default_decline_message || "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
     defaultUnrelatedMessage: data.default_unrelated_message || "This message doesn't seem to be related to our services.",
+    theme: (data.theme as "light" | "dark") || "light",
     language: (data.language as "de" | "en") || "de",
+    notificationsEnabled: data.notifications_enabled ?? true,
+    notifyNewLeads: data.notify_new_leads ?? true,
+    notifyLeadApproved: data.notify_lead_approved ?? true,
+    notifyLeadDeclined: data.notify_lead_declined ?? true,
+    notifyManualReview: data.notify_manual_review ?? true,
+    notifyDailySummary: data.notify_daily_summary ?? false,
+    notifyWeeklyReport: data.notify_weekly_report ?? true,
+    aiEnabled: data.ai_enabled ?? true,
+    autoApprove: data.auto_approve ?? false,
+    autoDecline: data.auto_decline ?? false,
+    autoManualReview: data.auto_manual_review ?? true,
+    minRatingThreshold: data.min_rating_threshold ?? 3,
+    autoResponseEnabled: data.auto_response_enabled ?? false,
+    sentimentAnalysis: data.sentiment_analysis ?? true,
+    priorityDetection: data.priority_detection ?? true,
+    duplicateDetection: data.duplicate_detection ?? true,
+    aiInstructions: data.ai_instructions || "",
   }
 }
 
@@ -447,6 +496,23 @@ export async function updateSettings(teamId: string, settings: Partial<AppSettin
       default_decline_message: settings.defaultDeclineMessage,
       default_unrelated_message: settings.defaultUnrelatedMessage,
       language: settings.language,
+      notifications_enabled: settings.notificationsEnabled,
+      notify_new_leads: settings.notifyNewLeads,
+      notify_lead_approved: settings.notifyLeadApproved,
+      notify_lead_declined: settings.notifyLeadDeclined,
+      notify_manual_review: settings.notifyManualReview,
+      notify_daily_summary: settings.notifyDailySummary,
+      notify_weekly_report: settings.notifyWeeklyReport,
+      ai_enabled: settings.aiEnabled,
+      auto_approve: settings.autoApprove,
+      auto_decline: settings.autoDecline,
+      auto_manual_review: settings.autoManualReview,
+      min_rating_threshold: settings.minRatingThreshold,
+      auto_response_enabled: settings.autoResponseEnabled,
+      sentiment_analysis: settings.sentimentAnalysis,
+      priority_detection: settings.priorityDetection,
+      duplicate_detection: settings.duplicateDetection,
+      ai_instructions: settings.aiInstructions,
     })
     .select()
     .single()
@@ -467,7 +533,114 @@ export async function updateSettings(teamId: string, settings: Partial<AppSettin
     defaultApproveMessage: data.default_approve_message || "Thank you for your interest! We'd love to work with you.",
     defaultDeclineMessage: data.default_decline_message || "Thank you for reaching out. Unfortunately, we're not able to help at this time.",
     defaultUnrelatedMessage: data.default_unrelated_message || "This message doesn't seem to be related to our services.",
+    theme: (data.theme as "light" | "dark") || "light",
     language: (data.language as "de" | "en") || "de",
+    notificationsEnabled: data.notifications_enabled ?? true,
+    notifyNewLeads: data.notify_new_leads ?? true,
+    notifyLeadApproved: data.notify_lead_approved ?? true,
+    notifyLeadDeclined: data.notify_lead_declined ?? true,
+    notifyManualReview: data.notify_manual_review ?? true,
+    notifyDailySummary: data.notify_daily_summary ?? false,
+    notifyWeeklyReport: data.notify_weekly_report ?? true,
+    aiEnabled: data.ai_enabled ?? true,
+    autoApprove: data.auto_approve ?? false,
+    autoDecline: data.auto_decline ?? false,
+    autoManualReview: data.auto_manual_review ?? true,
+    minRatingThreshold: data.min_rating_threshold ?? 3,
+    autoResponseEnabled: data.auto_response_enabled ?? false,
+    sentimentAnalysis: data.sentiment_analysis ?? true,
+    priorityDetection: data.priority_detection ?? true,
+    duplicateDetection: data.duplicate_detection ?? true,
+    aiInstructions: data.ai_instructions || "",
+  }
+}
+
+let inMemoryUserSettings: UserSettings = {
+  theme: "light",
+  language: "de",
+  notificationsEnabled: true,
+  notifyNewLeads: true,
+  notifyLeadApproved: true,
+  notifyLeadDeclined: true,
+  notifyManualReview: true,
+  notifyDailySummary: false,
+  notifyWeeklyReport: true,
+}
+
+export async function getUserSettings(userId?: string): Promise<UserSettings> {
+  const client = getSupabase()
+  
+  if (!client || !userId) {
+    return inMemoryUserSettings
+  }
+
+  const { data, error } = await client
+    .from("user_settings")
+    .select("*")
+    .eq("user_id", userId)
+    .single()
+
+  if (error || !data) {
+    return inMemoryUserSettings
+  }
+
+  return {
+    theme: (data.theme as "light" | "dark") || "light",
+    language: (data.language as "de" | "en") || "de",
+    notificationsEnabled: data.notifications_enabled ?? true,
+    notifyNewLeads: data.notify_new_leads ?? true,
+    notifyLeadApproved: data.notify_lead_approved ?? true,
+    notifyLeadDeclined: data.notify_lead_declined ?? true,
+    notifyManualReview: data.notify_manual_review ?? true,
+    notifyDailySummary: data.notify_daily_summary ?? false,
+    notifyWeeklyReport: data.notify_weekly_report ?? true,
+  }
+}
+
+export async function updateUserSettings(userId: string, settings: Partial<UserSettings>): Promise<UserSettings> {
+  const client = getSupabase()
+  
+  if (!client) {
+    inMemoryUserSettings = { ...inMemoryUserSettings, ...settings }
+    return inMemoryUserSettings
+  }
+
+  const { data, error } = await client
+    .from("user_settings")
+    .upsert({
+      user_id: userId,
+      theme: settings.theme,
+      language: settings.language,
+      notifications_enabled: settings.notificationsEnabled,
+      notify_new_leads: settings.notifyNewLeads,
+      notify_lead_approved: settings.notifyLeadApproved,
+      notify_lead_declined: settings.notifyLeadDeclined,
+      notify_manual_review: settings.notifyManualReview,
+      notify_daily_summary: settings.notifyDailySummary,
+      notify_weekly_report: settings.notifyWeeklyReport,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id',
+      ignoreDuplicates: false,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error("Error updating user settings:", error)
+    return inMemoryUserSettings
+  }
+
+  return {
+    theme: (data.theme as "light" | "dark") || "light",
+    language: (data.language as "de" | "en") || "de",
+    notificationsEnabled: data.notifications_enabled ?? true,
+    notifyNewLeads: data.notify_new_leads ?? true,
+    notifyLeadApproved: data.notify_lead_approved ?? true,
+    notifyLeadDeclined: data.notify_lead_declined ?? true,
+    notifyManualReview: data.notify_manual_review ?? true,
+    notifyDailySummary: data.notify_daily_summary ?? false,
+    notifyWeeklyReport: data.notify_weekly_report ?? true,
   }
 }
 
@@ -894,4 +1067,178 @@ export async function getUserTeamRole(userId: string): Promise<TeamRole | null> 
   }
 
   return data.team_role as TeamRole
+}
+
+export async function deleteUserAccount(userId: string): Promise<boolean> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return false
+  }
+
+  const { error } = await client
+    .from("users")
+    .delete()
+    .eq("id", userId)
+
+  if (error) {
+    console.error("Error deleting user account:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function deleteTeamAndMembers(teamId: string, ownerId: string): Promise<boolean> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return false
+  }
+
+  const { error: usersError } = await client
+    .from("users")
+    .delete()
+    .eq("team_id", teamId)
+
+  if (usersError) {
+    console.error("Error deleting team users:", usersError)
+    return false
+  }
+
+  const { error: settingsError } = await client
+    .from("settings")
+    .delete()
+    .eq("team_id", teamId)
+
+  if (settingsError) {
+    console.error("Error deleting team settings:", settingsError)
+  }
+
+  const { error: teamError } = await client
+    .from("teams")
+    .delete()
+    .eq("id", teamId)
+
+  if (teamError) {
+    console.error("Error deleting team:", teamError)
+    return false
+  }
+
+  return true
+}
+
+export interface UserProfile {
+  id: string
+  email: string
+  name: string
+  industry?: string
+  teamName?: string
+}
+
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  // First try to get basic user info (these columns should always exist)
+  const { data, error } = await client
+    .from("users")
+    .select("id, email, name, team_id")
+    .eq("id", userId)
+    .single()
+
+  if (error || !data) {
+    console.error("Error fetching user profile:", error)
+    return null
+  }
+
+  // Get team info (teamName, industry from teams table)
+  let industry = ""
+  let teamName = ""
+  
+  if (data.team_id) {
+    const { data: teamData } = await client
+      .from("teams")
+      .select("name, industry")
+      .eq("id", data.team_id)
+      .single()
+    
+    if (teamData) {
+      teamName = teamData.name || ""
+      industry = teamData.industry || ""
+    }
+  }
+
+  return {
+    id: data.id,
+    email: data.email,
+    name: data.name,
+    industry,
+    teamName,
+  }
+}
+
+export async function updateUserPassword(userId: string, newPassword: string): Promise<boolean> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return false
+  }
+
+  const hashedPassword = await hashPassword(newPassword)
+
+  const { error } = await client
+    .from("users")
+    .update({ password: hashedPassword })
+    .eq("id", userId)
+
+  if (error) {
+    console.error("Error updating password:", error)
+    return false
+  }
+
+  return true
+}
+
+export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
+  const client = getSupabase()
+  
+  if (!client) {
+    return null
+  }
+
+  // First get the user's team_id
+  const { data: userData } = await client
+    .from("users")
+    .select("team_id")
+    .eq("id", userId)
+    .single()
+
+  if (!userData?.team_id) {
+    // No team, just update user name
+    await client
+      .from("users")
+      .update({ name: updates.name })
+      .eq("id", userId)
+  } else {
+    // Update user name
+    await client
+      .from("users")
+      .update({ name: updates.name })
+      .eq("id", userId)
+
+    // Update team industry only (company is the team name)
+    if (updates.industry !== undefined) {
+      await client
+        .from("teams")
+        .update({ industry: updates.industry })
+        .eq("id", userData.team_id)
+    }
+  }
+
+  // Fetch and return updated profile
+  return getUserProfile(userId)
 }

@@ -24,7 +24,7 @@ export async function POST(
     }
 
     const session = lead.session
-    if (!session) {
+    if (!session || !session.id) {
       return NextResponse.json({ error: "Lead session not found" }, { status: 404 })
     }
 

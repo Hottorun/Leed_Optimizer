@@ -31,6 +31,21 @@ const statusConfig: Record<LeadStatus, { label: string; dotColor: string; textCo
     dotColor: "bg-violet-500",
     textColor: "text-violet-600"
   },
+  active: { 
+    label: "Active", 
+    dotColor: "bg-blue-500",
+    textColor: "text-blue-600"
+  },
+  completed: { 
+    label: "Completed", 
+    dotColor: "bg-emerald-500",
+    textColor: "text-emerald-600"
+  },
+  cancelled: { 
+    label: "Cancelled", 
+    dotColor: "bg-slate-400",
+    textColor: "text-slate-400"
+  },
 }
 
 const sourceConfig: Record<LeadSource, { icon: any; label: string; iconColor: string }> = {
@@ -58,7 +73,8 @@ function formatTimeAgo(dateString: string): string {
 }
 
 function getAiRecommendation(lead: Lead): { text: string; cta: string; style: string } {
-  if (lead.rating >= 4) {
+  const rating = lead.rating ?? 0
+  if (rating >= 4) {
     return { 
       text: "High priority", 
       cta: "Contact today",
@@ -72,7 +88,7 @@ function getAiRecommendation(lead: Lead): { text: string; cta: string; style: st
       style: "border-violet-200 bg-violet-50 text-violet-600"
     }
   }
-  if (lead.rating >= 3) {
+  if (rating >= 3) {
     return { 
       text: "Medium priority", 
       cta: "Schedule follow-up",
@@ -87,8 +103,8 @@ function getAiRecommendation(lead: Lead): { text: string; cta: string; style: st
 }
 
 export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
-  const status = statusConfig[lead.status]
-  const source = sourceConfig[lead.source]
+  const status = statusConfig[lead.status ?? 'pending'] ?? statusConfig.pending
+  const source = sourceConfig[lead.source ?? 'email']
   const SourceIcon = source.icon
   const aiRec = getAiRecommendation(lead)
 
@@ -140,12 +156,12 @@ export function LeadCard({ lead, onClick, isSelected }: LeadCardProps) {
               key={i}
               className={cn(
                 "h-3.5 w-3.5",
-                i < lead.rating ? "text-slate-500 fill-slate-500" : "text-slate-200"
+                i < (lead.rating ?? 0) ? "text-slate-500 fill-slate-500" : "text-slate-200"
               )}
             />
           ))}
         </div>
-        <span className="text-xs text-slate-400">{lead.rating}/5</span>
+        <span className="text-xs text-slate-400">{lead.rating ?? 0}/5</span>
       </div>
 
       <p className="mt-3 line-clamp-2 text-sm text-slate-500 leading-relaxed">

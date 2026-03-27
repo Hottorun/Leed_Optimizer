@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getTeamMembers, addTeamMember, updateTeamMemberRole, removeTeamMember, transferTeamOwnership } from "@/lib/supabase"
+import { getTeamMembers, addTeamMember, updateTeamMemberRole, removeTeamMember, transferTeamOwnership, deleteUserAccount } from "@/lib/supabase"
 
 interface User {
   id: string
@@ -131,6 +131,7 @@ export async function DELETE(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const memberId = searchParams.get("memberId")
+    const deleteAccount = searchParams.get("deleteAccount") === "true"
 
     if (!memberId) {
       return NextResponse.json({ error: "Member ID is required" }, { status: 400 })
@@ -145,6 +146,16 @@ export async function DELETE(request: Request) {
       }
     }
 
+    if (deleteAccount) {
+      // Delete the account completely
+      const success = await deleteUserAccount(memberId)
+      if (!success) {
+        return NextResponse.json({ error: "Failed to delete account" }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, deletedAccount: true })
+    }
+
+    // Just remove from team (keep account)
     const success = await removeTeamMember(memberId)
     return NextResponse.json({ success })
   } catch (err) {

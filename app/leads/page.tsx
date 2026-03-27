@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react"
 import useSWR from "swr"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { AppHeader } from "@/components/app-header"
 import { LeadDetailPanel } from "@/components/lead-detail-panel"
 import { ImportLeadModal } from "@/components/import-lead-modal"
@@ -19,13 +19,14 @@ type TabType = "overview" | "all" | "action"
 
 const statusColors = {
   approved: { bg: "#dcfce7", color: "#16a34a" },
-  manual: { bg: "#fef9c3", color: "#ca8a04" },
+  manual: { bg: "#dbeafe", color: "#2563eb" },
   declined: { bg: "#fee2e2", color: "#dc2626" },
-  pending: { bg: "#f1f5f9", color: "#64748b" },
+  pending: { bg: "#fef3c7", color: "#d97706" },
 }
 
 export default function LeadsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, loading: userLoading } = useUser()
   const { data: leads = [], mutate } = useSWR<Lead[]>("/api/leads", fetcher)
   const [activeTab, setActiveTab] = useState<TabType>("overview")
@@ -38,11 +39,37 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAllManual, setShowAllManual] = useState(false)
   const [showAllDeclined, setShowAllDeclined] = useState(false)
+
+  useEffect(() => {
+    const leadId = searchParams.get("id")
+    if (leadId && leads.length > 0) {
+      const lead = leads.find(l => l.id === leadId)
+      if (lead) {
+        setSelectedLead(lead)
+        router.replace("/leads", { scroll: false })
+      }
+    }
+  }, [searchParams, leads, router])
   const [uiStyle, setUIStyle] = useState<"colored" | "minimal">("colored")
 
   useEffect(() => {
     const savedStyle = (localStorage.getItem("uiStyle") || "colored") as "colored" | "minimal"
     setUIStyle(savedStyle)
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get("tab")
+    const filter = params.get("filter")
+    const sort = params.get("sort")
+    
+    if (tab === "action") {
+      setActiveTab("action")
+    } else if (filter || sort) {
+      setActiveTab("all")
+      if (filter) setStatusFilter(filter)
+      if (sort) setSortBy(sort as SortOption)
+    }
   }, [])
 
   useEffect(() => {
@@ -231,7 +258,7 @@ export default function LeadsPage() {
     const conversationSummary = lead.conversationSummary || lead.session?.collectedData?.message || ""
     const shortRequest = getShortRequest(conversationSummary)
     const statusStyle = statusColors[status as keyof typeof statusColors] || statusColors.pending
-    const truncatedNote = getTruncatedText(conversationSummary, 80)
+    const truncatedNote = getTruncatedText(lead.session?.ratingReason || conversationSummary || "No rating reason available", 80)
     
     const initials = lead.name.split(" ").map(n => n[0]).join("").slice(0, 2)
     
@@ -239,10 +266,12 @@ export default function LeadsPage() {
       <div
         key={lead.id}
         className={cn(
-          "flex flex-col gap-3 rounded border border-slate-200 bg-white p-5 text-left hover:border-slate-300 transition-all cursor-pointer w-full",
-          urgentStyle && "border-l-[3px] border-l-amber-500"
+          "flex flex-col gap-3 rounded-2xl border bg-white dark:bg-slate-800 p-5 text-left transition-all cursor-pointer w-full shadow-sm",
+          urgentStyle 
+            ? "border-slate-200 dark:border-slate-700 hover:!border-amber-500" 
+            : "border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600"
         )}
-        style={{ minHeight: 220 }}
+        style={{ height: 260 }}
         onClick={() => setSelectedLead(lead)}
       >
         <div className="flex items-center gap-3">
@@ -254,10 +283,10 @@ export default function LeadsPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-slate-800 truncate">{lead.name}</h3>
-              {lead.isLoyal && <Heart className="h-4 w-4 shrink-0 text-slate-400 fill-slate-400" />}
+              <h3 className="font-semibold text-slate-800 dark:text-white truncate">{lead.name}</h3>
+              {lead.isLoyal && <Heart className="h-4 w-4 shrink-0 text-pink-500 fill-pink-500" />}
             </div>
-            <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+            <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
               <span>{location}</span>
               <span>•</span>
               <span>{workType}</span>
@@ -272,12 +301,12 @@ export default function LeadsPage() {
         </div>
         
         {shortRequest && (
-          <div style={{ fontSize: 13, marginTop: 6, color: "#64748b" }}>
+          <div style={{ fontSize: 13, marginTop: 6, color: "#64748b" }} className="dark:text-slate-400">
             {shortRequest}
           </div>
         )}
         
-        <div style={{ background: "#fafaff", border: "1px solid #e0e7ff", borderRadius: 8, padding: "10px 12px" }}>
+        <div className="rounded-lg border-2 border-purple-500 p-3" style={{ background: "transparent" }}>
           <div className="flex items-center gap-1.5 mb-1">
             <Sparkles className="h-3.5 w-3.5" style={{ color: "#818cf8" }} />
             <span className="text-xs" style={{ background: "linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #c084fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontWeight: 600 }}>
@@ -294,21 +323,22 @@ export default function LeadsPage() {
           {typeof truncatedNote === 'object' ? (
             <p 
               className="text-[13px] leading-relaxed"
-              style={{ color: "#374151", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+              style={{ color: "#ffffff", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
               title={truncatedNote.full}
             >
               {truncatedNote.display}
             </p>
           ) : (
-            <p className="text-[13px] leading-relaxed" style={{ color: "#374151", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{truncatedNote}</p>
+            <p className="text-[13px] leading-relaxed" style={{ color: "#ffffff", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{truncatedNote}</p>
           )}
         </div>
         
         <div 
-          className="flex items-center justify-between text-xs text-slate-500"
+          className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
           style={{ borderTop: "1px solid #f1f5f9", marginTop: 12, paddingTop: 10 }}
         >
-          <span>
+          <span className="flex items-center gap-1">
+            {getLeadSource(lead) === "whatsapp" ? <MessageCircle className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
             {getLeadSource(lead) === "whatsapp" ? "WhatsApp" : "Email"}
           </span>
           <div className="flex items-center gap-2">
@@ -467,7 +497,10 @@ export default function LeadsPage() {
           style={{ borderTop: "1px solid #f1f5f9", marginTop: 12, paddingTop: 10 }}
         >
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>{getLeadSource(lead) === "whatsapp" ? "WhatsApp" : "Email"}</span>
+            <span className="flex items-center gap-1">
+              {getLeadSource(lead) === "whatsapp" ? <MessageCircle className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
+              {getLeadSource(lead) === "whatsapp" ? "WhatsApp" : "Email"}
+            </span>
             <span>•</span>
             <span>{lead.phone}</span>
           </div>
@@ -508,22 +541,25 @@ export default function LeadsPage() {
     )
   }
 
-  const renderSourceBar = (label: string, value: number, total: number, icon: React.ReactNode) => {
+  const renderSourceBar = (label: string, value: number, total: number, icon: React.ReactNode, onClick?: () => void) => {
     const width = total > 0 ? (value / total) * 100 : 0
     return (
-      <div className="flex items-center gap-3">
-        <span className="text-xs text-slate-600 w-20">{label}</span>
-        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div className="h-full bg-slate-800 rounded-full" style={{ width: `${width}%` }} />
+      <button
+        onClick={onClick}
+        className="flex items-center gap-3 w-full hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none text-left"
+      >
+        <span className="text-xs text-slate-600 dark:text-slate-400 w-20">{label}</span>
+        <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-full bg-slate-800 dark:bg-slate-300 rounded-full" style={{ width: `${width}%` }} />
         </div>
-        <span className="text-xs font-medium text-slate-800 w-6 text-right">{value}</span>
-      </div>
+        <span className="text-xs font-medium text-slate-800 dark:text-white w-6 text-right">{value}</span>
+      </button>
     )
   }
 
   return (
     <ThemeBackground>
-      <AppHeader onRefresh={mutate} isRefreshing={false} user={user ? { name: user.name, email: user.email } : undefined} />
+      <AppHeader onRefresh={mutate} isRefreshing={false} user={user ? { name: user.name, email: user.email } : undefined} leads={leads || []} />
       
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
@@ -543,14 +579,14 @@ export default function LeadsPage() {
           </button>
         </div>
 
-        <div className="flex gap-2 border-b border-slate-200">
+        <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("overview")}
             className={cn(
               "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
               activeTab === "overview" 
-                ? uiStyle === "minimal" ? "border-slate-600 text-slate-700" : "border-indigo-600 text-indigo-600" 
-                : "border-transparent text-slate-600 hover:text-slate-700"
+                ? uiStyle === "minimal" ? "border-slate-600 text-slate-700 dark:text-slate-200" : "border-indigo-600 text-indigo-600 dark:text-indigo-400" 
+                : "border-transparent text-slate-600 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             )}
           >
             <div className="flex items-center gap-2">
@@ -563,14 +599,14 @@ export default function LeadsPage() {
             className={cn(
               "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
               activeTab === "all" 
-                ? uiStyle === "minimal" ? "border-slate-600 text-slate-700" : "border-indigo-600 text-indigo-600" 
-                : "border-transparent text-slate-600 hover:text-slate-700"
+                ? uiStyle === "minimal" ? "border-slate-600 text-slate-700 dark:text-slate-200" : "border-indigo-600 text-indigo-600 dark:text-indigo-400" 
+                : "border-transparent text-slate-600 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             )}
           >
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               All Leads
-              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs">{stats.totalLeads}</span>
+              <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">{stats.totalLeads}</span>
             </div>
           </button>
           <button
@@ -578,7 +614,7 @@ export default function LeadsPage() {
             className={cn(
               "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
               activeTab === "action" 
-                ? uiStyle === "minimal" ? "border-slate-600 text-slate-700" : "border-amber-500 text-amber-600" 
+                ? uiStyle === "minimal" ? "border-slate-600 text-slate-700" : "border-orange-500 text-orange-600" 
                 : "border-transparent text-slate-600 hover:text-slate-700"
             )}
           >
@@ -586,7 +622,7 @@ export default function LeadsPage() {
               <AlertTriangle className="h-4 w-4" />
               Needs Action
               {stats.needsAction > 0 && (
-                <span className={cn("px-2 py-0.5 rounded-full text-xs", uiStyle === "minimal" ? "bg-slate-200 text-slate-600" : "bg-amber-100 text-amber-600")}>{stats.needsAction}</span>
+                <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-xs">{stats.needsAction}</span>
               )}
             </div>
           </button>
@@ -594,40 +630,52 @@ export default function LeadsPage() {
 
         {activeTab === "overview" && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 mb-6">
-              <div className="flex items-center justify-around">
-                <div className="text-center">
-                  <p className="text-sm text-slate-600">Total Leads</p>
-                  <p className="text-2xl font-bold text-slate-800 mt-1">{stats.totalLeads}</p>
-                </div>
-                <div className="h-10 w-px bg-gray-200" style={{ marginTop: 8, marginBottom: 8 }} />
-                <div className="text-center">
-                  <p className="text-sm text-slate-600">Approved</p>
-                  <p className="text-2xl font-bold text-slate-800 mt-1">{stats.approved}</p>
-                </div>
-                <div className="h-10 w-px bg-gray-200" style={{ marginTop: 8, marginBottom: 8 }} />
-                <div className="text-center">
-                  <p className="text-sm text-slate-600">Needs Action</p>
-                  <p className="text-2xl font-bold text-slate-800 mt-1">{stats.needsAction}</p>
-                </div>
-                <div className="h-10 w-px bg-gray-200" style={{ marginTop: 8, marginBottom: 8 }} />
-                <div className="text-center">
-                  <p className="text-sm text-slate-600">Pending</p>
-                  <p className="text-2xl font-bold text-slate-800 mt-1">{stats.pendingLeads}</p>
-                </div>
+            <div className="rounded-xl border border-slate-700" style={{ backgroundColor: "#111827" }}>
+              <div className="flex items-stretch">
+                <button
+                  onClick={() => { setActiveTab("all"); setStatusFilter("all"); }}
+                  className="flex-1 text-center hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none py-4"
+                >
+                  <p className="text-sm text-slate-400">Total Leads</p>
+                  <p className="text-2xl font-bold text-white mt-1">{stats.totalLeads}</p>
+                </button>
+                <div className="w-px bg-slate-600 mx-2" />
+                <button
+                  onClick={() => { setActiveTab("all"); setStatusFilter("approved"); }}
+                  className="flex-1 text-center hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none py-4"
+                >
+                  <p className="text-sm text-slate-400">Approved</p>
+                  <p className="text-2xl font-bold text-white mt-1">{stats.approved}</p>
+                </button>
+                <div className="w-px bg-slate-600 mx-2" />
+                <button
+                  onClick={() => { setActiveTab("action"); }}
+                  className="flex-1 text-center hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none py-4"
+                >
+                  <p className="text-sm text-slate-400">Needs Action</p>
+                  <p className="text-2xl font-bold text-white mt-1">{stats.needsAction}</p>
+                </button>
+                <div className="w-px bg-slate-600 mx-2" />
+                <button
+                  onClick={() => { setActiveTab("all"); setStatusFilter("pending"); }}
+                  className="flex-1 text-center hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none py-4"
+                >
+                  <p className="text-sm text-slate-400">Pending</p>
+                  <p className="text-2xl font-bold text-white mt-1">{stats.pendingLeads}</p>
+                </button>
               </div>
             </div>
 
             {actionLeads.length > 0 && (
-              <div className={cn("rounded border p-5", uiStyle === "minimal" ? "bg-slate-50 border-slate-300" : "bg-amber-50 border-amber-200")}>
+              <div className="rounded-2xl border border-orange-200 dark:border-orange-800 p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className={cn("h-5 w-5", uiStyle === "minimal" ? "text-slate-600" : "text-amber-600")} />
-                    <h3 className="font-semibold text-slate-800">Leads Requiring Human Action</h3>
+                    <AlertTriangle className="h-5 w-5 text-orange-500" />
+                    <h3 className="font-semibold text-slate-800 dark:text-white">Leads Requiring Human Action</h3>
                   </div>
                   <button
                     onClick={() => setActiveTab("action")}
-                    className={cn("text-sm font-medium", uiStyle === "minimal" ? "text-slate-600 hover:text-slate-700" : "text-amber-600 hover:text-amber-700")}
+                    className="text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400"
                   >
                     View All →
                   </button>
@@ -639,52 +687,65 @@ export default function LeadsPage() {
             )}
 
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="rounded border p-5 bg-white" style={{ borderColor: "#e2e8f0" }}>
+              <div className="rounded-2xl border border-slate-700 p-5 bg-white">
                 <h3 className="font-semibold text-slate-800 mb-4">Lead Status Breakdown</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => { setActiveTab("all"); setStatusFilter("pending"); }}
+                    className="flex items-center justify-between w-full hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none"
+                  >
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColors.pending.color }} />
-                      <span className="text-sm text-slate-600">Pending</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Pending</span>
                     </div>
-                    <span className="font-medium text-slate-800">{stats.pendingLeads}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-800 dark:text-white">{stats.pendingLeads}</span>
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab("all"); setStatusFilter("manual"); }}
+                    className="flex items-center justify-between w-full hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none"
+                  >
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColors.manual.color }} />
-                      <span className="text-sm text-slate-600">Manual Review</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Manual Review</span>
                     </div>
-                    <span className="font-medium text-slate-800">{stats.manualReview}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-800 dark:text-white">{stats.manualReview}</span>
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab("all"); setStatusFilter("approved"); }}
+                    className="flex items-center justify-between w-full hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none"
+                  >
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColors.approved.color }} />
-                      <span className="text-sm text-slate-600">Approved</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Approved</span>
                     </div>
-                    <span className="font-medium text-slate-800">{stats.approved}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-800 dark:text-white">{stats.approved}</span>
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab("all"); setStatusFilter("declined"); }}
+                    className="flex items-center justify-between w-full hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none"
+                  >
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColors.declined.color }} />
-                      <span className="text-sm text-slate-600">Declined</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Declined</span>
                     </div>
-                    <span className="font-medium text-slate-800">{stats.declined}</span>
-                  </div>
+                    <span className="font-medium text-slate-800 dark:text-white">{stats.declined}</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="rounded border p-5 bg-white" style={{ borderColor: "#e2e8f0" }}>
+              <div className="rounded-2xl border border-slate-700 p-5 bg-white">
                 <h3 className="font-semibold text-slate-800 mb-4">Source Breakdown</h3>
                 <div className="space-y-3">
                   {renderSourceBar("WhatsApp", stats.whatsapp, stats.totalLeads, 
-                    <svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+                    <svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>,
+                    () => { setActiveTab("all"); setSourceFilter("whatsapp"); }
                   )}
-                  {renderSourceBar("Email", stats.email, stats.totalLeads, <Mail className="h-4 w-4 text-blue-500" />)}
+                  {renderSourceBar("Email", stats.email, stats.totalLeads, <Mail className="h-4 w-4 text-blue-500" />, () => { setActiveTab("all"); setSourceFilter("email"); })}
                 </div>
-                <div className="mt-6 pt-4 border-t border-slate-100">
+                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Average Rating</span>
-                    <span className="font-bold text-slate-800">{stats.avgRating} / 5</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Average Rating</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{stats.avgRating} / 5</span>
                   </div>
                 </div>
               </div>
@@ -694,13 +755,13 @@ export default function LeadsPage() {
 
         {activeTab === "all" && (
           <>
-            <div className="rounded border border-slate-200 p-4">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setStatusFilter("all")}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded border transition-colors",
-                    statusFilter === "all" ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                    "px-3 py-1.5 text-sm rounded-lg border transition-colors",
+                    statusFilter === "all" ? "bg-slate-800 border-slate-800 text-white" : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300"
                   )}
                 >
                   All ({stats.totalLeads})
@@ -708,10 +769,10 @@ export default function LeadsPage() {
                 <button
                   onClick={() => setStatusFilter("pending")}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded border transition-colors",
+                    "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                     statusFilter === "pending" 
                       ? uiStyle === "minimal" ? "bg-slate-600 border-slate-600 text-white" : "bg-yellow-600 border-yellow-600 text-white" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300"
                   )}
                 >
                   Pending ({stats.pendingLeads})
@@ -719,10 +780,10 @@ export default function LeadsPage() {
                 <button
                   onClick={() => setStatusFilter("approved")}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded border transition-colors",
+                    "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                     statusFilter === "approved" 
                       ? uiStyle === "minimal" ? "bg-slate-600 border-slate-600 text-white" : "bg-green-600 border-green-600 text-white" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300"
                   )}
                 >
                   Approved ({stats.approved})
@@ -730,10 +791,10 @@ export default function LeadsPage() {
                 <button
                   onClick={() => setStatusFilter("manual")}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded border transition-colors",
+                    "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                     statusFilter === "manual" 
-                      ? uiStyle === "minimal" ? "bg-slate-600 border-slate-600 text-white" : "bg-amber-600 border-amber-600 text-white" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      ? uiStyle === "minimal" ? "bg-slate-600 border-slate-600 text-white" : "bg-orange-600 border-orange-600 text-white" 
+                      : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300"
                   )}
                 >
                   Manual ({stats.manualReview})
@@ -741,22 +802,22 @@ export default function LeadsPage() {
                 <button
                   onClick={() => setStatusFilter("declined")}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded border transition-colors",
+                    "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                     statusFilter === "declined" 
                       ? uiStyle === "minimal" ? "bg-slate-600 border-slate-600 text-white" : "bg-red-600 border-red-600 text-white" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300"
                   )}
                 >
                   Declined ({stats.declined})
                 </button>
-                <div className="h-6 w-px bg-gray-200 mx-2" />
+                <div className="h-6 w-px bg-gray-200 dark:bg-slate-600 mx-2" />
                 <button
                   onClick={() => setSourceFilter(sourceFilter === "whatsapp" ? "all" : "whatsapp")}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded border transition-colors",
+                    "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                     sourceFilter === "whatsapp" 
                       ? uiStyle === "minimal" ? "bg-slate-600 border-slate-600 text-white" : "bg-green-600 border-green-600 text-white" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300"
                   )}
                 >
                   WhatsApp ({stats.whatsapp})
@@ -764,10 +825,10 @@ export default function LeadsPage() {
                 <button
                   onClick={() => setSourceFilter(sourceFilter === "email" ? "all" : "email")}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded border transition-colors",
+                    "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                     sourceFilter === "email" 
                       ? uiStyle === "minimal" ? "bg-slate-600 border-slate-600 text-white" : "bg-blue-600 border-blue-600 text-white" 
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                      : "bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300"
                   )}
                 >
                   Email ({stats.email})
@@ -777,13 +838,13 @@ export default function LeadsPage() {
 
             <div className="flex items-center gap-3">
               <div className="relative flex-1 min-w-[200px] max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600 dark:text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search leads..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-10 rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-600 focus:border-slate-400 focus:outline-none"
+                  className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 pl-10 pr-4 text-sm text-slate-800 dark:text-white placeholder:text-slate-600 dark:placeholder:text-slate-400 focus:border-slate-400 dark:focus:border-slate-500 focus:outline-none"
                 />
               </div>
               
@@ -823,14 +884,11 @@ export default function LeadsPage() {
               </div>
             ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredLeads.map((lead, index) => {
-                  const isOddLast = filteredLeads.length % 2 === 1 && index === filteredLeads.length - 1
-                  return (
-                    <div key={lead.id} className={isOddLast ? "md:col-span-2 lg:col-span-3" : ""}>
+                {filteredLeads.map((lead) => (
+                    <div key={lead.id}>
                       {renderLeadCard(lead)}
                     </div>
-                  )
-                })}
+                ))}
               </div>
             ) : (
               <div className="rounded border border-slate-200 overflow-hidden bg-white">
@@ -961,7 +1019,7 @@ export default function LeadsPage() {
                   {sortLeads(declinedLeads).slice(0, showAllDeclined ? undefined : 4).map((lead) => {
                     const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - new Date(lead.updatedAt).getTime()) / (1000 * 60 * 60 * 24)))
                     const statusStyle = statusColors[getLeadStatus(lead) as keyof typeof statusColors] || statusColors.pending
-                    const truncatedNote = getTruncatedText(lead.conversationSummary || "", 80)
+                    const truncatedNote = getTruncatedText(lead.session?.ratingReason || lead.conversationSummary || "No rating reason available", 80)
                     return (
                       <div 
                         key={lead.id} 
@@ -982,17 +1040,17 @@ export default function LeadsPage() {
                                   </svg>
                                 ))}
                               </div>
-                              <span 
-                                className="text-xs px-2 py-0.5 rounded-full capitalize font-medium"
-                                style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
-                              >
+          <span 
+            className="text-xs px-3 py-1 rounded-full capitalize shrink-0 font-bold"
+            style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
+          >
                                 {getLeadStatus(lead)}
                               </span>
                               <span className="text-xs text-slate-500">
                                 {daysLeft} days left
                               </span>
                             </div>
-                            <div className="text-xs text-slate-500 mt-1">{truncatedNote.display || truncatedNote}</div>
+                            <div className="text-xs text-slate-500 mt-1">{typeof truncatedNote === 'object' ? truncatedNote.display : truncatedNote}</div>
                           </div>
                         </div>
                         <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
