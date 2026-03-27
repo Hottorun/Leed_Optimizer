@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion, type Variants, useScroll, useTransform } from "framer-motion";
 import { Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,8 @@ function ElegantShape({
     scrollYRange = [0, 300],
     scrollXRange = [0, 50],
     scrollRotateDelta = 30,
+    mobileWidth,
+    mobileHeight,
 }: {
     className?: string;
     delay?: number;
@@ -24,6 +27,8 @@ function ElegantShape({
     scrollYRange?: [number, number];
     scrollXRange?: [number, number];
     scrollRotateDelta?: number;
+    mobileWidth?: number;
+    mobileHeight?: number;
 }) {
     const { scrollY } = useScroll();
     
@@ -31,6 +36,18 @@ function ElegantShape({
     const x = useTransform(scrollY, [0, 300, 600], [scrollXRange[0], scrollXRange[1], scrollXRange[1] * 1.2], { clamp: true });
     const rotation = useTransform(scrollY, [0, 300, 600], [rotate, rotate + scrollRotateDelta, rotate + scrollRotateDelta * 1.3], { clamp: true });
     const opacity = useTransform(scrollY, [0, 200, 400], [1, 1, 0], { clamp: true });
+
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const actualWidth = isMobile && mobileWidth ? mobileWidth : width;
+    const actualHeight = isMobile && mobileHeight ? mobileHeight : height;
 
     return (
         <motion.div
@@ -68,8 +85,8 @@ function ElegantShape({
                     ease: "easeInOut",
                 }}
                 style={{
-                    width,
-                    height,
+                    width: actualWidth,
+                    height: actualHeight,
                 }}
                 className="relative"
             >
@@ -138,6 +155,8 @@ function HeroGeometric({
                     delay={0.3}
                     width={600}
                     height={140}
+                    mobileWidth={320}
+                    mobileHeight={80}
                     rotate={12}
                     gradient="from-emerald-500/[0.15]"
                     className="left-[-10%] md:left-[-5%] top-[15%] md:top-[20%]"
