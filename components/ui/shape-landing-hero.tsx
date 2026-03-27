@@ -152,7 +152,7 @@ function HeroGeometric({
                     height={120}
                     rotate={-15}
                     gradient="from-rose-500/[0.15]"
-                    className="right-[-5%] md:right-[0%] top-[70%] md:top-[75%] hidden md:block"
+                    className="right-[-5%] md:right-[0%] top-[70%] md:top-[75%]"
                     scrollYRange={[0, 250]}
                     scrollXRange={[0, -70]}
                     scrollRotateDelta={-35}
