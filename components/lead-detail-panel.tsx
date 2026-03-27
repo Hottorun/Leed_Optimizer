@@ -116,7 +116,7 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
         </div>
 
         <div className="mt-6">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
@@ -128,11 +128,11 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
                 />
               ))}
             </div>
-            <span className="text-sm font-semibold text-slate-700 ml-2">{rating}/5</span>
+            <span className="text-sm font-semibold text-slate-700">{rating}/5</span>
+            {lead.session?.ratingReason && (
+              <span className="text-sm text-slate-500">- {lead.session.ratingReason}</span>
+            )}
           </div>
-          {lead.session?.ratingReason && (
-            <p className="text-xs text-slate-500 mt-1">{lead.session.ratingReason}</p>
-          )}
         </div>
 
         <div className="mt-6">
