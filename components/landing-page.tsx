@@ -245,7 +245,7 @@ export function LandingPage() {
         title1={t('title').split('.').slice(0,1).join('.')}
         title2={t('title').split('.').slice(1).join('.').replace(/^\s+/, '') || 'Instantly Qualified.'}
       />
-      <main className="overflow-hidden bg-[#030303] relative">
+      <main className="overflow-hidden bg-[#030303] relative z-10">
         <FeaturesSection t={t} />
         <FAQSection t={t} />
         <Footer t={t} />

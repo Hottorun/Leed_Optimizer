@@ -30,6 +30,7 @@ function ElegantShape({
     const y = useTransform(scrollY, [0, 300, 600], [scrollYRange[0], scrollYRange[1], scrollYRange[1] * 1.5], { clamp: true });
     const x = useTransform(scrollY, [0, 300, 600], [scrollXRange[0], scrollXRange[1], scrollXRange[1] * 1.2], { clamp: true });
     const rotation = useTransform(scrollY, [0, 300, 600], [rotate, rotate + scrollRotateDelta, rotate + scrollRotateDelta * 1.3], { clamp: true });
+    const opacity = useTransform(scrollY, [0, 200, 400], [1, 1, 0], { clamp: true });
 
     return (
         <motion.div
@@ -52,6 +53,7 @@ function ElegantShape({
                 x, 
                 y, 
                 rotate,
+                opacity,
                 willChange: "transform",
             }}
             className={cn("absolute will-change-transform", className)}
@@ -112,7 +114,7 @@ function HeroGeometric({
     const { scrollY } = useScroll();
     
     const heroY = useTransform(scrollY, [0, 300], [0, 80], { clamp: true });
-    const heroOpacity = useTransform(scrollY, [0, 200, 400], [1, 1, 0], { clamp: true });
+    const heroOpacity = useTransform(scrollY, [0, 150, 300], [1, 1, 0], { clamp: true });
     const backgroundY = useTransform(scrollY, [0, 500], [0, 100], { clamp: true });
 
     return (
@@ -157,9 +159,9 @@ function HeroGeometric({
                     rotate={-8}
                     gradient="from-violet-500/[0.15]"
                     className="left-[5%] md:left-[10%] bottom-[5%] md:bottom-[10%]"
-                    scrollYRange={[0, -120]}
-                    scrollXRange={[0, 50]}
-                    scrollRotateDelta={25}
+                    scrollYRange={[0, -50]}
+                    scrollXRange={[0, 30]}
+                    scrollRotateDelta={10}
                 />
 
                 <ElegantShape
