@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { ArrowRight, ChevronDown, CreditCard, Heart, Menu, Shield, X, Zap, Mail, Phone, MapPin, Sun, Moon, Globe, Check } from 'lucide-react'
@@ -138,6 +138,86 @@ const translations = {
 type Language = keyof typeof translations
 type TranslationKey = keyof typeof translations.de
 
+function ScrollEffects() {
+  const [scrollY, setScrollY] = useState(0)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  return (
+    <>
+      {/* Gradient blobs that move with scroll */}
+      <div
+        className="fixed top-0 left-0 w-[800px] h-[800px] rounded-full pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 60%)',
+          transform: `translate(-200px, ${-200 + scrollY * 0.3}px)`,
+          transition: 'transform 0.1s ease-out',
+        }}
+      />
+      <div
+        className="fixed top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 60%)',
+          transform: `translate(150px, ${100 + scrollY * 0.2}px)`,
+          transition: 'transform 0.1s ease-out',
+        }}
+      />
+      <div
+        className="fixed bottom-0 left-1/2 w-[500px] h-[500px] rounded-full pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 60%)',
+          transform: `translate(-50%, ${50 - scrollY * 0.4}px)`,
+          transition: 'transform 0.1s ease-out',
+        }}
+      />
+      
+      {/* Decorative floating shapes */}
+      <div
+        className="fixed top-1/4 left-10 w-32 h-32 border border-emerald-200/30 rounded-full pointer-events-none"
+        style={{
+          transform: `translateY(${scrollY * 0.15}px) rotate(${scrollY * 0.02}deg)`,
+          transition: 'transform 0.1s ease-out',
+        }}
+      />
+      <div
+        className="fixed top-1/3 right-20 w-20 h-20 bg-emerald-100/20 rounded-2xl pointer-events-none"
+        style={{
+          transform: `translateY(${scrollY * 0.25}px) rotate(${scrollY * -0.03}deg)`,
+          transition: 'transform 0.1s ease-out',
+        }}
+      />
+      <div
+        className="fixed bottom-1/4 right-1/4 w-16 h-16 border border-blue-200/20 rounded-lg pointer-events-none"
+        style={{
+          transform: `translateY(${scrollY * 0.35}px) rotate(${scrollY * 0.04}deg)`,
+          transition: 'transform 0.1s ease-out',
+        }}
+      />
+      
+      {/* Subtle grid that moves with scroll */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0 opacity-[0.015]"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '80px 80px',
+          transform: `translateY(${scrollY * 0.5}px)`,
+          transition: 'transform 0.1s ease-out',
+        }}
+      />
+    </>
+  )
+}
+
 export function LandingPage() {
   const [language, setLanguage] = useState<Language>('en')
   const { theme, setTheme, resolvedTheme } = useTheme()
@@ -160,15 +240,8 @@ export function LandingPage() {
   return (
     <>
       <HeroHeader t={t} language={language} toggleLanguage={toggleLanguage} theme={resolvedTheme} setTheme={setTheme} />
+      <ScrollEffects />
       <main className="overflow-hidden bg-white dark:bg-slate-950 relative">
-        <div
-          aria-hidden
-          className="z-[2] absolute inset-0 pointer-events-none isolate opacity-50 contain-strict hidden lg:block"
-        >
-          <div className="w-[35rem] h-[80rem] -translate-y-[350px] absolute left-0 top-0 -rotate-45 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,hsla(142,70%,45%,.08)_0,hsla(142,50%,35%,.02)_50%,hsla(142,40%,25%,0)_80%)]" />
-          <div className="h-[80rem] absolute left-0 top-0 w-56 -rotate-45 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,hsla(142,70%,45%,.06)_0,hsla(142,40%,25%,.02)_80%,transparent_100%)] [translate:5%_-50%]" />
-          <div className="h-[80rem] -translate-y-[350px] absolute left-0 top-0 w-56 -rotate-45 bg-[radial-gradient(50%_50%_at_50%_50%,hsla(142,70%,45%,.04)_0,hsla(142,40%,25%,.02)_80%,transparent_100%)]" />
-        </div>
         <section>
           <div className="relative pt-24 md:pt-36">
             <div className="mx-auto max-w-7xl px-6">
@@ -187,7 +260,7 @@ export function LandingPage() {
 
                 <div className="mt-12 flex flex-col items-center justify-center gap-4 md:flex-row">
                   <Button asChild size="lg" className="rounded-xl px-8 bg-emerald-600 hover:bg-emerald-700 text-white text-base font-medium">
-                    <Link href="/login">
+                    <Link href="/contact">
                       <span className="text-nowrap">{t('getStarted')}</span>
                     </Link>
                   </Button>
@@ -233,7 +306,7 @@ function HeroHeader({ t, language, toggleLanguage, theme, setTheme }: HeroHeader
   return (
     <header>
       <nav className={cn('fixed z-20 w-full px-2 group', menuState && 'active')}>
-        <div className={cn('mx-auto mt-2 max-w-6xl px-6 transition-all duration-300 lg:px-12', isScrolled && 'bg-white/80 dark:bg-slate-900/50 max-w-4xl rounded-2xl border dark:border-slate-700 border-slate-200 backdrop-blur-lg lg:px-5')}>
+        <div className={cn('mx-auto mt-2 max-w-6xl px-6 transition-all duration-300 lg:px-12 border border-slate-200/30 dark:border-slate-700/30 rounded-2xl', isScrolled && 'bg-white/80 dark:bg-slate-900/50 max-w-4xl border-slate-200/60 dark:border-slate-700/60 backdrop-blur-lg lg:px-5')}>
           <div className="relative flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
             <div className="flex w-full justify-between lg:w-auto">
               <Link href="/" aria-label="Startseite" className="flex items-center space-x-2">
@@ -300,10 +373,10 @@ function HeroHeader({ t, language, toggleLanguage, theme, setTheme }: HeroHeader
                   <Link href="/login">{t('signIn')}</Link>
                 </Button>
                 <Button asChild size="sm" className={cn("bg-emerald-600 hover:bg-emerald-700 text-white", isScrolled && 'lg:hidden')}>
-                  <Link href="/login">{t('signUp')}</Link>
+                  <Link href="/contact">{t('getStarted')}</Link>
                 </Button>
                 <Button asChild size="sm" className={cn("bg-emerald-600 hover:bg-emerald-700 text-white", !isScrolled && 'hidden')}>
-                  <Link href="/login">{t('getStarted')}</Link>
+                  <Link href="/contact">{t('getStarted')}</Link>
                 </Button>
               </div>
             </div>
@@ -372,7 +445,7 @@ function FeaturesSection({ t }: FeaturesSectionProps) {
 
         <div className="mt-12 text-center">
           <Button asChild size="lg" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
-            <Link href="/login" className="gap-2">
+            <Link href="/contact" className="gap-2">
               {t('tryFree')}
               <ArrowRight className="size-4" />
             </Link>
@@ -399,7 +472,7 @@ function FAQSection({ t }: FAQSectionProps) {
   return (
     <section className="py-16 md:py-24" id="faq">
       <div className="mx-auto max-w-5xl px-4 md:px-6">
-        <div className="mx-auto max-w-xl text-center">
+        <div className="mx-auto max-w-xl text-center mb-12">
           <h2 className="text-balance text-3xl font-bold md:text-4xl lg:text-5xl text-slate-800 dark:text-white">{t('faqTitle')}</h2>
           <p className="text-slate-600 dark:text-slate-300 mt-4 text-balance">{t('faqDesc')}</p>
         </div>
