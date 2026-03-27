@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AppHeader } from "@/components/app-header"
+import { LeadDetailPanel } from "@/components/lead-detail-panel"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { cn } from "@/lib/utils"
 import { 
@@ -148,6 +149,42 @@ export default function DashboardPage() {
     return "Send newsletter"
   }
 
+  const handleUpdateLead = async (updates: Partial<Lead>) => {
+    if (!selectedLead) return
+    try {
+      const response = await fetch(`/api/leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      })
+      if (response.ok) {
+        const updatedLead = await response.json()
+        setSelectedLead(updatedLead)
+        const updatedLeads = leads.map(l => l.id === updatedLead.id ? updatedLead : l)
+        setLeads(updatedLeads)
+      }
+    } catch (error) {
+      console.error("Failed to update lead:", error)
+    }
+  }
+
+  const handleSendMessage = async (action: "approve" | "decline", message: string) => {
+    if (!selectedLead) return
+    try {
+      const response = await fetch(`/api/leads/${selectedLead.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, message }),
+      })
+      if (response.ok) {
+        const result = await response.json()
+        setSelectedLead(result.lead)
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error)
+    }
+  }
+
   const renderLeadCard = (lead: Lead, index?: number) => (
     <button
       key={lead.id}
@@ -219,6 +256,14 @@ export default function DashboardPage() {
       <style dangerouslySetInnerHTML={{ __html: gradientKeyframes }} />
       <AppHeader onRefresh={() => {}} isRefreshing={false} user={{ name: user.name, email: user.email }} />
       <ThemeBackground>
+        {selectedLead && (
+          <LeadDetailPanel
+            lead={selectedLead}
+            onClose={() => setSelectedLead(null)}
+            onUpdate={handleUpdateLead}
+            onSendMessage={handleSendMessage}
+          />
+        )}
         <div className="p-6 space-y-8 max-w-6xl mx-auto">
           <div className="text-center py-8">
             <div className="mb-4">
