@@ -55,7 +55,7 @@ export function LeadListItem({ lead, onClick, isSelected }: LeadListItemProps) {
   const workType = collectedData.workType || "Not specified"
   const location = collectedData.location || "Not specified"
   const contactPlatform = collectedData.contactPlatform || "email"
-  const rating = session?.rating
+  const rating = session?.rating ?? undefined
 
   return (
     <button

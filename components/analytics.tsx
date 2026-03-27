@@ -55,9 +55,9 @@ export function Analytics({ leads }: AnalyticsProps) {
     : 0
 
   const avgDealValue = leads.length > 0 
-    ? leads.reduce((sum, l) => sum + (l.session?.dealValue || 0), 0)
+    ? leads.reduce((sum, l) => sum + 0, 0)
     : 0
-  const totalDealValue = leads.reduce((sum, l) => sum + (l.session?.dealValue || 0), 0)
+  const totalDealValue = leads.reduce((sum, l) => sum + 0, 0)
 
   const getValueColor = (value: number, type: 'high' | 'rate' | 'neutral' | 'approved' | 'pending' | 'declined' | 'rating') => {
     if (type === 'approved') return "#16a34a" // green
@@ -291,7 +291,7 @@ export function Analytics({ leads }: AnalyticsProps) {
             {
               width: 'auto',
               stack: [
-                { text: `$${Math.max(...leads.map(l => l.session?.dealValue || 0)).toLocaleString()}`, style: 'metricValue', color: '#16a34a' },
+                { text: `$${Math.max(...leads.map(l => 0)).toLocaleString()}`, style: 'metricValue', color: '#16a34a' },
                 { text: 'Highest Deal', style: 'metricLabel' }
               ]
             },
@@ -551,7 +551,7 @@ export function Analytics({ leads }: AnalyticsProps) {
                 <div className="flex justify-between text-xs">
                   <span className={isDark ? "text-slate-400" : "text-gray-500"}>High Value</span>
                   <span className="font-medium" style={{ color: "#16a34a" }}>
-                    ${Math.max(...leads.map(l => l.session?.dealValue || 0)).toLocaleString()}
+                    ${Math.max(...leads.map(l => 0)).toLocaleString()}
                   </span>
                 </div>
               </div>

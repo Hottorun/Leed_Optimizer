@@ -186,10 +186,13 @@ export async function addLead(lead: {
       leadCount,
       isLoyal,
       autoApproved: false,
+      lastContactedAt: null,
       teamId: lead.teamId,
-      status: "pending",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      status: "pending",
+      source: lead.phone ? "whatsapp" : "email",
+      rating: 0,
     }
     inMemoryLeads.unshift(newLead)
     return newLead
@@ -650,35 +653,37 @@ function mapDbLeadToLead(
     name: string
     phone: string
     email: string
-    lead_count?: number
-    is_loyal?: boolean
-    auto_approved?: boolean
-    last_contacted_at?: string
-    status?: string
+    lead_count?: number | null
+    is_loyal?: boolean | null
+    auto_approved?: boolean | null
+    last_contacted_at?: string | null
     created_at: string
     updated_at: string
-    teams_id?: string
+    teams_id?: string | null
   },
   session?: LeadSession
 ): Lead {
-  const collectedData = session?.collectedData || {}
+  const collected = session?.collectedData || {}
   return {
     id: row.id,
-    name: row.name,
-    phone: row.phone,
-    email: row.email,
-    location: collectedData.location,
-    workType: collectedData.workType,
-    conversationSummary: collectedData.message,
-    leadCount: row.lead_count || 1,
-    isLoyal: row.is_loyal || false,
-    autoApproved: row.auto_approved || false,
-    lastContactedAt: row.last_contacted_at,
-    status: (session?.status as Lead["status"]) || "pending",
+    name: row.name || "",
+    phone: row.phone || "",
+    email: row.email || "",
+    leadCount: row.lead_count ?? 1,
+    isLoyal: row.is_loyal ?? false,
+    autoApproved: row.auto_approved ?? false,
+    lastContactedAt: row.last_contacted_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    teamId: row.teams_id,
+    teamId: row.teams_id ?? undefined,
     session,
+    status: session?.status || "pending",
+    source: row.phone ? "whatsapp" : "email",
+    rating: session?.rating ?? 0,
+    ratingReason: session?.ratingReason ?? undefined,
+    workType: collected.workType,
+    location: collected.location,
+    conversationSummary: collected.conversationSummary,
   }
 }
 
@@ -703,11 +708,11 @@ function mapDbSessionToSession(row: {
     leadsId: row.leads_id,
     status: row.status as LeadSession["status"],
     currentStep: row.current_step,
-    collectedData: row.collected_data,
-    needsMoreInfo: row.needs_more_info,
-    rating: row.rating,
-    ratingReason: row.rating_reason,
-    forwardedAt: row.forwarded_at,
+    collectedData: row.collected_data || {},
+    needsMoreInfo: row.needs_more_info ?? true,
+    rating: row.rating ?? null,
+    ratingReason: row.rating_reason ?? null,
+    forwardedAt: row.forwarded_at ?? null,
     updatedAt: row.updated_at,
   }
 }

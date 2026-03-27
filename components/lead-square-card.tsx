@@ -23,7 +23,7 @@ export function LeadSquareCard({ lead, onClick, isSelected }: LeadSquareCardProp
   const collectedData = session?.collectedData || {}
   const workType = collectedData.workType || "Not specified"
   const contactPlatform = collectedData.contactPlatform || "email"
-  const rating = session?.rating
+  const rating = session?.rating ?? undefined
 
   const initials = lead.name
     .split(" ")

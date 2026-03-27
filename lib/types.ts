@@ -2,22 +2,18 @@ export type LeadStatus = "pending" | "approved" | "declined" | "manual" | "activ
 export type LeadSource = "whatsapp" | "email"
 
 export interface LeadSession {
-  id?: string
-  createdAt?: string
-  teamsId?: string
-  leadsId?: string
+  id: string
+  createdAt: string
+  teamsId: string
+  leadsId: string
   status: LeadStatus
   currentStep: string
-  collectedData?: CollectedData
-  needsMoreInfo?: boolean
-  rating?: number
-  ratingReason?: string
-  forwardedAt?: string
-  updatedAt?: string
-  aiRecommendation?: string
-  conversionProbability?: number
-  dealValue?: number
-  urgency?: "High" | "Medium" | "Low"
+  collectedData: CollectedData
+  needsMoreInfo: boolean
+  rating: number | null
+  ratingReason: string | null
+  forwardedAt: string | null
+  updatedAt: string
 }
 
 export interface CollectedData {
@@ -27,6 +23,7 @@ export interface CollectedData {
   location?: string
   workType?: string
   message?: string
+  conversationSummary?: string
   company?: string
   budget?: string
   timeline?: string
@@ -39,24 +36,22 @@ export interface Lead {
   name: string
   phone: string
   email: string
-  location?: string
-  workType?: string
-  conversationSummary?: string
-  approveMessage?: string
-  declineMessage?: string
-  rating?: number
-  ratingReason?: string
-  status?: LeadStatus
-  source?: LeadSource
-  isLoyal?: boolean
+  leadCount: number
+  isLoyal: boolean
+  autoApproved: boolean
+  lastContactedAt: string | null
   createdAt: string
   updatedAt: string
-  teamId?: string
-  leadCount?: number
-  autoApproved?: boolean
-  lastContactedAt?: string
+  teamId: string | undefined
   session?: LeadSession
-  collectedData?: CollectedData
+  // Derived from session (for convenience)
+  status: LeadStatus
+  source: LeadSource
+  rating: number
+  ratingReason?: string
+  workType?: string
+  location?: string
+  conversationSummary?: string
 }
 
 export type TeamRole = "owner" | "admin" | "member"

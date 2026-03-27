@@ -55,13 +55,14 @@ function getLeadStatus(lead: Lead): string {
 }
 
 export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPanelProps) {
-  const [approveMessage, setApproveMessage] = useState(lead.approveMessage || "")
-  const [declineMessage, setDeclineMessage] = useState(lead.declineMessage || "")
+  const [approveMessage, setApproveMessage] = useState("")
+  const [declineMessage, setDeclineMessage] = useState("")
   const [isSending, setIsSending] = useState<"approve" | "decline" | null>(null)
 
-  const status = getLeadStatus(lead)
-  const rating = getLeadRating(lead)
-  const source = getLeadSource(lead)
+  const status = lead.session?.status || lead.status
+  const rating = lead.session?.rating ?? lead.rating ?? 0
+  const source = lead.phone ? "whatsapp" : "email"
+  const collectedData = lead.session?.collectedData || {}
 
   const handleSend = async (action: "approve" | "decline") => {
     setIsSending(action)
@@ -80,10 +81,7 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-200 p-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-slate-800">Lead Details</h2>
-            <span className="text-xs text-slate-500 capitalize">{status}</span>
-          </div>
+          <h2 className="text-lg font-semibold text-slate-800">Lead Details</h2>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -105,13 +103,31 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
               .toUpperCase()}
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xl font-semibold text-slate-800">{lead.name}</h3>
-              <span className="text-xs text-slate-500">{sourceLabel}</span>
+              <span className={cn(
+                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                source === "whatsapp"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-blue-200 bg-blue-50 text-blue-700"
+              )}>
+                {sourceLabel}
+              </span>
+              <span className={cn(
+                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize",
+                status === "approved" && "border-green-200 bg-green-50 text-green-600",
+                status === "pending" && "border-amber-200 bg-amber-50 text-amber-600",
+                status === "manual" && "border-blue-200 bg-blue-50 text-blue-600",
+                status === "declined" && "border-red-200 bg-red-50 text-red-600",
+                status === "active" && "border-sky-200 bg-sky-50 text-sky-700",
+                status === "completed" && "border-slate-200 bg-slate-50 text-slate-500",
+              )}>
+                {status}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 text-slate-500 mt-1">
               <Briefcase className="h-4 w-4" />
-              <span>{lead.session?.collectedData?.workType || lead.workType || "Not specified"}</span>
+              <span>{collectedData.workType || lead.workType || "Not specified"}</span>
             </div>
           </div>
         </div>
@@ -146,18 +162,18 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
           <div className="grid grid-cols-3 gap-3">
             <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
               <TrendingUp className="h-5 w-5 text-slate-500" />
-              <span className="text-lg font-bold text-slate-700">{lead.session?.conversionProbability ?? 0}%</span>
-              <span className="text-xs text-slate-500">Conversion</span>
+              <span className="text-lg font-bold text-slate-700">{collectedData.timeline || "N/A"}</span>
+              <span className="text-xs text-slate-500">Timeline</span>
             </div>
             <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
               <DollarSign className="h-5 w-5 text-slate-500" />
-              <span className="text-lg font-bold text-slate-700">${(lead.session?.dealValue ?? 0).toLocaleString()}</span>
-              <span className="text-xs text-slate-500">Deal Value</span>
+              <span className="text-lg font-bold text-slate-700">{collectedData.budget || "N/A"}</span>
+              <span className="text-xs text-slate-500">Budget</span>
             </div>
             <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
               <Zap className="h-5 w-5 text-slate-500" />
-              <span className="text-lg font-bold text-slate-700">{lead.session?.urgency ?? "N/A"}</span>
-              <span className="text-xs text-slate-500">Urgency</span>
+              <span className="text-lg font-bold text-slate-700">{lead.session?.needsMoreInfo ? "Needs Info" : "Ready"}</span>
+              <span className="text-xs text-slate-500">Status</span>
             </div>
           </div>
         </div>
@@ -169,7 +185,7 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
               AI Recommendation
             </span>
           </div>
-          <p className="text-sm text-slate-600">{lead.session?.aiRecommendation || lead.ratingReason || "No recommendation yet"}</p>
+          <p className="text-sm text-slate-600">{lead.session?.ratingReason || lead.ratingReason || "No recommendation yet"}</p>
         </div>
 
         <div className="mt-6 grid gap-3">
@@ -191,20 +207,20 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
             <MapPin className="h-5 w-5 text-slate-400" />
             <div>
               <p className="text-xs text-slate-500">Location</p>
-              <p className="font-medium text-slate-800">{lead.session?.collectedData?.location || lead.location || "Not specified"}</p>
+              <p className="font-medium text-slate-800">{collectedData.location || lead.location || "Not specified"}</p>
             </div>
           </div>
         </div>
 
-        {lead.conversationSummary && (
-          <div className="mt-6">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+        {(lead.conversationSummary || collectedData.conversationSummary) && (
+          <div className="mt-4 rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600 mb-2">
               <MessageSquare className="h-4 w-4" />
               Conversation Summary
             </div>
-            <div className="mt-2 rounded-lg border border-slate-200 p-4 text-sm text-slate-600 leading-relaxed">
-              {lead.conversationSummary}
-            </div>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {lead.conversationSummary || collectedData.conversationSummary}
+            </p>
           </div>
         )}
 

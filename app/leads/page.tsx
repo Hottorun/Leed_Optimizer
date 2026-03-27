@@ -262,7 +262,7 @@ function LeadsContent() {
     const status = getLeadStatus(lead)
     const workType = lead.session?.collectedData?.workType || lead.workType || "Not specified"
     const location = lead.session?.collectedData?.location || lead.location || "Not specified"
-    const aiRecommendation = lead.session?.aiRecommendation || "No recommendation yet"
+    const aiRecommendation = lead.session?.ratingReason || lead.ratingReason || "No recommendation yet"
     const conversationSummary = lead.conversationSummary || lead.session?.collectedData?.message || ""
     const shortRequest = getShortRequest(conversationSummary)
     const statusStyle = statusColors[status as keyof typeof statusColors] || statusColors.pending
@@ -418,7 +418,7 @@ function LeadsContent() {
     const status = getLeadStatus(lead)
     const workType = lead.session?.collectedData?.workType || lead.workType || "Not specified"
     const location = lead.session?.collectedData?.location || lead.location || "Not specified"
-    const aiRecommendation = lead.session?.aiRecommendation || "No recommendation yet"
+    const aiRecommendation = lead.session?.ratingReason || lead.ratingReason || "No recommendation yet"
     const conversationSummary = lead.conversationSummary || lead.session?.collectedData?.message || ""
     const statusStyle = statusColors[status as keyof typeof statusColors] || statusColors.pending
     
