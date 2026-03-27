@@ -15,6 +15,9 @@ import {
   Star,
   Clock,
   Sparkles,
+  TrendingUp,
+  DollarSign,
+  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -126,6 +129,24 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
               ))}
             </div>
             <span className="text-sm font-semibold text-slate-700 ml-2">{rating}/5</span>
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-3 gap-3">
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+            <TrendingUp className="h-5 w-5 text-slate-500" />
+            <span className="text-lg font-bold text-slate-700">{lead.session?.conversionProbability || Math.round(rating * 20)}%</span>
+            <span className="text-xs text-slate-500">Conversion</span>
+          </div>
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+            <DollarSign className="h-5 w-5 text-slate-500" />
+            <span className="text-lg font-bold text-slate-700">${(lead.session?.dealValue || rating * 250).toLocaleString()}</span>
+            <span className="text-xs text-slate-500">Deal Value</span>
+          </div>
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+            <Zap className="h-5 w-5 text-slate-500" />
+            <span className="text-lg font-bold text-slate-700">{lead.session?.urgency || (rating >= 4 ? "High" : rating >= 3 ? "Medium" : "Low")}</span>
+            <span className="text-xs text-slate-500">Urgency</span>
           </div>
         </div>
 
