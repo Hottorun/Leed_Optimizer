@@ -130,23 +130,34 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
             </div>
             <span className="text-sm font-semibold text-slate-700 ml-2">{rating}/5</span>
           </div>
+          {lead.session?.ratingReason && (
+            <p className="text-xs text-slate-500 mt-1">{lead.session.ratingReason}</p>
+          )}
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-3">
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
-            <TrendingUp className="h-5 w-5 text-slate-500" />
-            <span className="text-lg font-bold text-slate-700">{lead.session?.conversionProbability ?? 0}%</span>
-            <span className="text-xs text-slate-500">Conversion</span>
+        <div className="mt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4" style={{ color: "#818cf8" }} />
+            <span className="text-sm font-semibold" style={{ background: "linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #c084fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              AI Analysis
+            </span>
           </div>
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
-            <DollarSign className="h-5 w-5 text-slate-500" />
-            <span className="text-lg font-bold text-slate-700">${(lead.session?.dealValue ?? 0).toLocaleString()}</span>
-            <span className="text-xs text-slate-500">Deal Value</span>
-          </div>
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
-            <Zap className="h-5 w-5 text-slate-500" />
-            <span className="text-lg font-bold text-slate-700">{lead.session?.urgency ?? "N/A"}</span>
-            <span className="text-xs text-slate-500">Urgency</span>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+              <TrendingUp className="h-5 w-5 text-slate-500" />
+              <span className="text-lg font-bold text-slate-700">{lead.session?.conversionProbability ?? 0}%</span>
+              <span className="text-xs text-slate-500">Conversion</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+              <DollarSign className="h-5 w-5 text-slate-500" />
+              <span className="text-lg font-bold text-slate-700">${(lead.session?.dealValue ?? 0).toLocaleString()}</span>
+              <span className="text-xs text-slate-500">Deal Value</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
+              <Zap className="h-5 w-5 text-slate-500" />
+              <span className="text-lg font-bold text-slate-700">{lead.session?.urgency ?? "N/A"}</span>
+              <span className="text-xs text-slate-500">Urgency</span>
+            </div>
           </div>
         </div>
 
