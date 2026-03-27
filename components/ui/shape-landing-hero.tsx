@@ -27,9 +27,9 @@ function ElegantShape({
 }) {
     const { scrollY } = useScroll();
     
-    const y = useTransform(scrollY, [0, 500, 1000], [scrollYRange[0], scrollYRange[1], scrollYRange[1] * 2], { clamp: true });
-    const x = useTransform(scrollY, [0, 500, 1000], [scrollXRange[0], scrollXRange[1], scrollXRange[1] * 1.5], { clamp: true });
-    const rotation = useTransform(scrollY, [0, 500, 1000], [rotate, rotate + scrollRotateDelta, rotate + scrollRotateDelta * 1.5], { clamp: true });
+    const y = useTransform(scrollY, [0, 300, 600], [scrollYRange[0], scrollYRange[1], scrollYRange[1] * 1.5], { clamp: true });
+    const x = useTransform(scrollY, [0, 300, 600], [scrollXRange[0], scrollXRange[1], scrollXRange[1] * 1.2], { clamp: true });
+    const rotation = useTransform(scrollY, [0, 300, 600], [rotate, rotate + scrollRotateDelta, rotate + scrollRotateDelta * 1.3], { clamp: true });
 
     return (
         <motion.div
@@ -90,13 +90,11 @@ function ElegantShape({
 function HeroGeometric({
     badge = "AI-Powered Lead Qualification",
     title1 = "Every Lead.",
-    title2 = "One Place.",
-    title3 = "Instantly Qualified.",
+    title2 = "Instantly Qualified.",
 }: {
     badge?: string;
     title1?: string;
     title2?: string;
-    title3?: string;
 }) {
     const fadeUpVariants: Variants = {
         hidden: { opacity: 0, y: 30 },
@@ -104,8 +102,8 @@ function HeroGeometric({
             opacity: 1,
             y: 0,
             transition: {
-                duration: 1.5,
-                delay: 1 + i * 0.8,
+                duration: 1,
+                delay: 0.5 + i * 0.2,
                 ease: [0.25, 0.4, 0.25, 1],
             },
         }),
@@ -113,9 +111,9 @@ function HeroGeometric({
 
     const { scrollY } = useScroll();
     
-    const heroY = useTransform(scrollY, [0, 500], [0, 80], { clamp: true });
-    const heroOpacity = useTransform(scrollY, [0, 400, 800], [1, 1, 0], { clamp: true });
-    const backgroundY = useTransform(scrollY, [0, 800], [0, 150], { clamp: true });
+    const heroY = useTransform(scrollY, [0, 300], [0, 80], { clamp: true });
+    const heroOpacity = useTransform(scrollY, [0, 200, 400], [1, 1, 0], { clamp: true });
+    const backgroundY = useTransform(scrollY, [0, 500], [0, 100], { clamp: true });
 
     return (
         <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#030303]">
@@ -125,7 +123,7 @@ function HeroGeometric({
             />
 
             <motion.div 
-                className="absolute inset-0 overflow-hidden will-change-transform z-0"
+                className="absolute inset-0 overflow-hidden will-change-transform"
                 style={{ y: heroY }}
             >
                 <ElegantShape
@@ -133,10 +131,10 @@ function HeroGeometric({
                     width={600}
                     height={140}
                     rotate={12}
-                    gradient="from-emerald-500/[0.8]"
-                    className="left-[-10%] md:left-[-5%] top-[10%] md:top-[15%]"
-                    scrollYRange={[0, -300]}
-                    scrollXRange={[0, 150]}
+                    gradient="from-emerald-500/[0.15]"
+                    className="left-[-10%] md:left-[-5%] top-[15%] md:top-[20%]"
+                    scrollYRange={[0, -200]}
+                    scrollXRange={[0, 100]}
                     scrollRotateDelta={45}
                 />
 
@@ -146,9 +144,9 @@ function HeroGeometric({
                     height={120}
                     rotate={-15}
                     gradient="from-rose-500/[0.15]"
-                    className="right-[-5%] md:right-[0%] top-[50%] md:top-[55%]"
-                    scrollYRange={[0, 350]}
-                    scrollXRange={[0, -100]}
+                    className="right-[-5%] md:right-[0%] top-[70%] md:top-[75%]"
+                    scrollYRange={[0, 250]}
+                    scrollXRange={[0, -70]}
                     scrollRotateDelta={-35}
                 />
 
@@ -158,9 +156,9 @@ function HeroGeometric({
                     height={80}
                     rotate={-8}
                     gradient="from-violet-500/[0.15]"
-                    className="left-[5%] md:left-[10%] top-[35%] md:top-[40%]"
-                    scrollYRange={[0, -180]}
-                    scrollXRange={[0, 80]}
+                    className="left-[5%] md:left-[10%] bottom-[5%] md:bottom-[10%]"
+                    scrollYRange={[0, -120]}
+                    scrollXRange={[0, 50]}
                     scrollRotateDelta={25}
                 />
 
@@ -170,9 +168,9 @@ function HeroGeometric({
                     height={60}
                     rotate={20}
                     gradient="from-amber-500/[0.15]"
-                    className="right-[15%] md:right-[20%] top-[70%] md:top-[75%]"
-                    scrollYRange={[0, -250]}
-                    scrollXRange={[0, -80]}
+                    className="right-[15%] md:right-[20%] top-[10%] md:top-[15%]"
+                    scrollYRange={[0, -180]}
+                    scrollXRange={[0, -60]}
                     scrollRotateDelta={-40}
                 />
 
@@ -182,9 +180,9 @@ function HeroGeometric({
                     height={40}
                     rotate={-25}
                     gradient="from-cyan-500/[0.15]"
-                    className="left-[20%] md:left-[25%] top-[25%] md:top-[30%]"
-                    scrollYRange={[0, -120]}
-                    scrollXRange={[0, 60]}
+                    className="left-[20%] md:left-[25%] top-[5%] md:top-[10%]"
+                    scrollYRange={[0, -80]}
+                    scrollXRange={[0, 40]}
                     scrollRotateDelta={30}
                 />
 
@@ -194,15 +192,15 @@ function HeroGeometric({
                     height={30}
                     rotate={45}
                     gradient="from-blue-500/[0.15]"
-                    className="right-[30%] md:right-[35%] top-[45%] md:top-[50%]"
-                    scrollYRange={[0, 200]}
-                    scrollXRange={[0, -60]}
+                    className="right-[30%] md:right-[35%] bottom-[20%] md:bottom-[25%]"
+                    scrollYRange={[0, 140]}
+                    scrollXRange={[0, -50]}
                     scrollRotateDelta={-25}
                 />
             </motion.div>
 
             <motion.div 
-                className="relative z-10 container mx-auto px-4 md:px-6 -mt-72 md:-mt-80"
+                className="relative z-10 container mx-auto px-4 md:px-6"
                 style={{ opacity: heroOpacity }}
             >
                 <div className="max-w-3xl mx-auto text-center">
@@ -225,23 +223,14 @@ function HeroGeometric({
                         initial="hidden"
                         animate="visible"
                     >
-                        <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-1 md:mb-2 tracking-tight">
+                        <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-6 md:mb-8 tracking-tight">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80">
                                 {title1}
                             </span>
-                        </h1>
-                    </motion.div>
-
-                    <motion.div
-                        custom={2}
-                        variants={fadeUpVariants}
-                        initial="hidden"
-                        animate="visible"
-                    >
-                        <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-1 md:mb-2 tracking-tight">
+                            <br />
                             <span
                                 className={cn(
-                                    "bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80"
+                                    "bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 via-white/90 to-rose-300 "
                                 )}
                             >
                                 {title2}
@@ -250,24 +239,7 @@ function HeroGeometric({
                     </motion.div>
 
                     <motion.div
-                        custom={3}
-                        variants={fadeUpVariants}
-                        initial="hidden"
-                        animate="visible"
-                    >
-                        <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-4 md:mb-6 tracking-tight">
-                            <span
-                                className={cn(
-                                    "bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 via-white/90 to-rose-300 "
-                                )}
-                            >
-                                {title3}
-                            </span>
-                        </h1>
-                    </motion.div>
-
-                    <motion.div
-                        custom={4}
+                        custom={2}
                         variants={fadeUpVariants}
                         initial="hidden"
                         animate="visible"
