@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, User, Mail, Camera, Save, Check, Loader2, Briefcase, Users } from "lucide-react"
+import { ArrowLeft, User, Mail, Save, Check, Loader2, Briefcase, Users } from "lucide-react"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { cn } from "@/lib/utils"
 
@@ -27,7 +27,6 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [avatar, setAvatar] = useState<string | null>(null)
 
   useEffect(() => {
     fetch("/api/settings/profile")
@@ -84,23 +83,12 @@ export default function ProfilePage() {
     }
   }
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setAvatar(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
   if (loading) {
     return (
       <ThemeBackground className="p-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <div className="max-w-lg mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         </div>
       </ThemeBackground>
@@ -109,126 +97,102 @@ export default function ProfilePage() {
 
   return (
     <ThemeBackground className="p-6">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-lg mx-auto space-y-5">
+        {/* Back */}
         <button
           onClick={() => router.push("/settings")}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer mb-6"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Settings
+          Back
         </button>
 
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-            <h1 className="text-xl font-semibold text-slate-800">Profile Information</h1>
-            <p className="text-sm text-slate-500 mt-1">Update your personal details</p>
-          </div>
+        {/* Header */}
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Profile</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Update your personal details</p>
+        </div>
 
-          <div className="p-6 space-y-6">
+        {/* Form Card */}
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="p-5 space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div className="border border-destructive/30 text-destructive px-3 py-2 rounded-md text-sm bg-destructive/5">
                 {error}
               </div>
             )}
 
-            <div className="flex flex-col items-center">
-              <div className="relative">
-                <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
-                  {avatar ? (
-                    <img src={avatar} alt="Profile" className="h-full w-full object-cover" />
-                  ) : profile.firstName || profile.lastName ? (
-                    <span className="text-2xl font-medium text-blue-600">
-                      {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
-                    </span>
-                  ) : (
-                    <User className="h-10 w-10 text-blue-600" />
-                  )}
-                </div>
-                <label className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white cursor-pointer hover:bg-blue-700 transition-colors shadow-md">
-                  <Camera className="h-4 w-4" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
-                </label>
+            {/* Avatar */}
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-lg font-semibold">
+                {profile.firstName.charAt(0)}{profile.lastName.charAt(0) || ""}
               </div>
-              <p className="text-sm text-slate-500 mt-3">Click camera to upload photo</p>
+              <div>
+                <p className="text-sm font-medium">{profile.firstName} {profile.lastName}</p>
+                <p className="text-xs text-muted-foreground">{profile.email}</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={profile.firstName}
-                    onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                    className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                </div>
+            {/* Fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">First Name</label>
+                <input
+                  type="text"
+                  value={profile.firstName}
+                  onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                  className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground/20"
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Last Name</label>
                 <input
                   type="text"
                   value={profile.lastName}
                   onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                  className="w-full h-10 px-4 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground/20"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={profile.email}
-                  disabled
-                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
-                />
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              </div>
-              <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Email</label>
+              <input
+                type="email"
+                value={profile.email}
+                disabled
+                className="w-full h-9 px-3 rounded-md border border-border bg-muted text-muted-foreground text-sm cursor-not-allowed"
+              />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Industry</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={profile.industry}
-                  onChange={(e) => setProfile({ ...profile, industry: e.target.value })}
-                  placeholder="e.g., Construction, Real Estate, Healthcare"
-                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                />
-                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Industry</label>
+              <input
+                type="text"
+                value={profile.industry}
+                onChange={(e) => setProfile({ ...profile, industry: e.target.value })}
+                placeholder="e.g., Construction, Real Estate"
+                className="w-full h-9 px-3 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground/20"
+              />
             </div>
 
             {profile.teamName && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Team</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={profile.teamName}
-                    disabled
-                    className="w-full h-10 pl-10 pr-4 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
-                  />
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Team cannot be changed</p>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Team</label>
+                <input
+                  type="text"
+                  value={profile.teamName}
+                  disabled
+                  className="w-full h-9 px-3 rounded-md border border-border bg-muted text-muted-foreground text-sm cursor-not-allowed"
+                />
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-border">
               <button
                 onClick={() => router.push("/settings")}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
@@ -236,28 +200,20 @@ export default function ProfilePage() {
                 onClick={handleSave}
                 disabled={isSaving}
                 className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 cursor-pointer",
-                  saved 
-                    ? "bg-emerald-600 text-white" 
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                  "px-4 py-1.5 text-sm rounded-md transition-all flex items-center gap-1.5",
+                  saved
+                    ? "bg-foreground/80 text-background"
+                    : "bg-foreground text-background hover:bg-foreground/90"
                 )}
               >
                 {isSaving ? (
-                  <>
-                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Saving...
-                  </>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : saved ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Saved!
-                  </>
+                  <Check className="h-3.5 w-3.5" />
                 ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </>
+                  <Save className="h-3.5 w-3.5" />
                 )}
+                {saved ? "Saved" : "Save"}
               </button>
             </div>
           </div>

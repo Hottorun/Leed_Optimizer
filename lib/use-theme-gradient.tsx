@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 
-type UIStyle = "colored" | "minimal"
 export type BackgroundStyle = "gradient" | "monotone"
 
 interface ThemeGradient {
@@ -42,11 +41,6 @@ const gradientColors: Record<string, { from: string; to: string }> = {
   amber: { from: "#fef3c7", to: "#dbeafe" },
 }
 
-function getInitialUIStyle(): UIStyle {
-  if (typeof window === "undefined") return "colored"
-  return (localStorage.getItem("uiStyle") as UIStyle) || "colored"
-}
-
 function getInitialBackgroundStyle(): BackgroundStyle {
   if (typeof window === "undefined") return "gradient"
   return (localStorage.getItem("backgroundStyle") as BackgroundStyle) || "gradient"
@@ -59,83 +53,73 @@ function getInitialDarkMode(): boolean {
 }
 
 export function useThemeGradient() {
-  const [gradient] = useState<ThemeGradient>(themeGradients.blue)
-  const [currentUIStyle, setCurrentUIStyle] = useState<UIStyle>(getInitialUIStyle)
-  const [backgroundStyle, setBackgroundStyle] = useState<BackgroundStyle>(getInitialBackgroundStyle)
+   const [gradient] = useState<ThemeGradient>(themeGradients.blue)
+   const [backgroundStyle, setBackgroundStyle] = useState<BackgroundStyle>(getInitialBackgroundStyle)
 
-  useEffect(() => {
-    const savedStyle = (localStorage.getItem("uiStyle") || "colored") as UIStyle
-    const savedBgStyle = localStorage.getItem("backgroundStyle") as BackgroundStyle | null
-    
-    setCurrentUIStyle(savedStyle)
-    if (savedBgStyle) {
-      setBackgroundStyle(savedBgStyle)
-    }
+   useEffect(() => {
+     const savedBgStyle = localStorage.getItem("backgroundStyle")
+     
+     if (savedBgStyle === "gradient" || savedBgStyle === "monotone") {
+       setBackgroundStyle(savedBgStyle as BackgroundStyle)
+     }
 
-    const handleStorageChange = () => {
-      const newStyle = (localStorage.getItem("uiStyle") || "colored") as UIStyle
-      const newBgStyle = localStorage.getItem("backgroundStyle") as BackgroundStyle | null
-      setCurrentUIStyle(newStyle)
-      if (newBgStyle) {
-        setBackgroundStyle(newBgStyle)
-      }
-    }
+     const handleStorageChange = () => {
+       const newBgStyle = localStorage.getItem("backgroundStyle")
+       if (newBgStyle === "gradient" || newBgStyle === "monotone") {
+         setBackgroundStyle(newBgStyle as BackgroundStyle)
+       }
+     }
 
-    window.addEventListener("storage", handleStorageChange)
-    return () => window.removeEventListener("storage", handleStorageChange)
-  }, [])
+     window.addEventListener("storage", handleStorageChange)
+     return () => window.removeEventListener("storage", handleStorageChange)
+   }, [])
 
-  const saveBackgroundStyle = (style: BackgroundStyle) => {
-    setBackgroundStyle(style)
-    localStorage.setItem("backgroundStyle", style)
-  }
+   const saveBackgroundStyle = (style: BackgroundStyle) => {
+     setBackgroundStyle(style)
+     localStorage.setItem("backgroundStyle", style)
+   }
 
-  return { gradient, currentUIStyle, backgroundStyle, saveBackgroundStyle, themeColors, themeLightColors, gradientColors }
-}
+   return { gradient, backgroundStyle, saveBackgroundStyle, themeColors, themeLightColors, gradientColors }
+ }
 
 export function ThemeBackground({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  const { currentUIStyle } = useThemeGradient()
-  const [isDark, setIsDark] = useState(false)
+   const [isDark, setIsDark] = useState(false)
 
-  useEffect(() => {
-    const checkDark = () => {
-      const storedTheme = localStorage.getItem("theme")
-      const hasDarkClass = document.documentElement.classList.contains("dark")
-      setIsDark(storedTheme === "dark" || hasDarkClass)
-    }
-    
-    checkDark()
-    
-    const observer = new MutationObserver(checkDark)
-    observer.observe(document.documentElement, { 
-      attributes: true, 
-      attributeFilter: ["class"] 
-    })
-    
-    window.addEventListener("storage", checkDark)
-    return () => {
-      observer.disconnect()
-      window.removeEventListener("storage", checkDark)
-    }
-  }, [])
+   useEffect(() => {
+     const checkDark = () => {
+       const storedTheme = localStorage.getItem("theme")
+       const hasDarkClass = document.documentElement.classList.contains("dark")
+       setIsDark(storedTheme === "dark" || hasDarkClass)
+     }
+     
+     checkDark()
+     
+     const observer = new MutationObserver(checkDark)
+     observer.observe(document.documentElement, { 
+       attributes: true, 
+       attributeFilter: ["class"] 
+     })
+     
+     window.addEventListener("storage", checkDark)
+     return () => {
+       observer.disconnect()
+       window.removeEventListener("storage", checkDark)
+     }
+   }, [])
 
-  const getBackgroundStyle = (): React.CSSProperties => {
-    if (isDark) return { background: "#0f172a" }
-    
-    if (currentUIStyle === "minimal") {
-      return { background: "#cbd5e1" }
-    }
+   const getBackgroundStyle = (): React.CSSProperties => {
+     if (isDark) return { background: "#0f172a" }
+     
+     return { background: "linear-gradient(to bottom right, #dbeafe, #e0e7ff)" }
+   }
 
-    return { background: "linear-gradient(to bottom right, #dbeafe, #e0e7ff)" }
-  }
-
-  return (
-    <div 
-      className={`min-h-screen transition-colors duration-300 ${className}`}
-      style={getBackgroundStyle()}
-      suppressHydrationWarning
-    >
-      {children}
-    </div>
-  )
-}
+   return (
+     <div 
+       className={`min-h-screen transition-colors duration-300 ${className}`}
+       style={getBackgroundStyle()}
+       suppressHydrationWarning
+     >
+       {children}
+     </div>
+   )
+ }

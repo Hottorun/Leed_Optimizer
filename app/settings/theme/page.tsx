@@ -113,10 +113,7 @@ export default function ThemePage() {
 
   return (
     <div className={cn(
-      "min-h-screen p-6",
-      selectedStyle === "minimal"
-        ? "bg-slate-100 dark:bg-slate-950"
-        : "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-800 dark:to-slate-900"
+       "min-h-screen p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-800 dark:to-slate-900"
     )}>
       <div className="max-w-2xl mx-auto">
         <button
@@ -140,15 +137,13 @@ export default function ThemePage() {
                 <h2 className="text-lg font-semibold text-slate-800">UI Style</h2>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => handleStyleChange("colored")}
-                  className={cn(
-                    "relative p-6 rounded-xl border-2 transition-all cursor-pointer text-left",
-                    selectedStyle === "colored"
-                      ? "border-blue-600 bg-blue-50"
-                      : "border-slate-200 hover:border-slate-300 bg-white"
-                  )}
-                >
+               <button
+                 onClick={() => handleStyleChange("colored")}
+                 className={cn(
+                   "relative p-6 rounded-xl border-2 transition-all cursor-pointer text-left",
+                   "border-blue-600 bg-blue-50"
+                 )}
+               >
                   <div className="h-16 w-full rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center gap-2 mb-3">
                     <span className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md shadow-sm">Button</span>
                     <span className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-md">Text</span>
@@ -162,15 +157,13 @@ export default function ThemePage() {
                   )}
                 </button>
 
-                <button
-                  onClick={() => handleStyleChange("minimal")}
-                  className={cn(
-                    "relative p-6 rounded-xl border-2 transition-all cursor-pointer text-left",
-                    selectedStyle === "minimal"
-                      ? "border-slate-500 bg-slate-100"
-                      : "border-slate-200 hover:border-slate-300 bg-white"
-                  )}
-                >
+               <button
+                 onClick={() => handleStyleChange("minimal")}
+                 className={cn(
+                   "relative p-6 rounded-xl border-2 transition-all cursor-pointer text-left",
+                   "border-slate-200 hover:border-slate-300 bg-white"
+                 )}
+               >
                   <div className="h-16 w-full rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center gap-2 mb-3">
                     <span className="px-3 py-1.5 bg-slate-500 text-white text-xs font-medium rounded-md shadow-sm">Button</span>
                     <span className="px-3 py-1.5 bg-slate-200 text-slate-700 text-xs font-medium rounded-md">Text</span>

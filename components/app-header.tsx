@@ -5,15 +5,6 @@ import { useRouter, usePathname } from "next/navigation"
 import { Bell, User, LogOut, Settings, ChevronDown, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-const gradientKeyframes = `
-@keyframes gradientShift {
-  0% { background-position: 0% 50% }
-  50% { background-position: 100% 50% }
-  100% { background-position: 0% 50% }
-}
-`
-
 import type { Lead } from "@/lib/types"
 
 interface AppHeaderProps {
@@ -33,14 +24,8 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [uiStyle, setUIStyle] = useState<"colored" | "minimal">("colored")
   const notificationRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const savedStyle = (localStorage.getItem("uiStyle") || "colored") as "colored" | "minimal"
-    setUIStyle(savedStyle)
-  }, [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -84,9 +69,9 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
     const diffDays = Math.floor(diffMs / 86400000)
 
     if (diffMins < 1) return "just now"
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    return `${diffDays}d ago`
   }
 
   const notifications = leads
@@ -107,41 +92,39 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
       }
       const status = lead.session?.status || lead.status
       const isAutoUpdate = lead.autoApproved === true || lead.autoApproved === false
-      
+
       return {
         id: lead.id,
-        text: status === "approved" 
-          ? `Lead approved: ${lead.name}` 
+        text: status === "approved"
+          ? `${lead.name} approved`
           : status === "declined"
-            ? `Lead declined: ${lead.name}`
-            : lead.phone 
-              ? `New lead from WhatsApp: ${lead.name}`
-              : `New email lead: ${lead.name}`,
+            ? `${lead.name} declined`
+            : lead.phone
+              ? `New WhatsApp: ${lead.name}`
+              : `New email: ${lead.name}`,
         time: getTimeAgo(lead.createdAt),
         type: isAutoUpdate ? "auto" : isNew() ? "new" : "update",
       }
     })
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: gradientKeyframes }} />
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-      <div className="flex h-16 items-center justify-between px-6">
-        <div className="flex items-center gap-6">
-          <button 
+    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <div className="flex h-14 items-center justify-between px-6">
+        <div className="flex items-center gap-8">
+          <button
             onClick={handleLogoClick}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-70 transition-opacity"
           >
-            <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg", uiStyle === "minimal" ? "bg-slate-800" : "bg-slate-800")}>
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground">
               {isLoading ? (
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
+                <Loader2 className="h-4 w-4 text-background animate-spin" />
               ) : (
-                <span className="text-sm font-bold text-white">A</span>
+                <span className="text-xs font-bold text-background">A</span>
               )}
             </div>
-            <span className="text-lg font-semibold text-slate-800">Aclea</span>
+            <span className="text-sm font-semibold tracking-tight">aclea</span>
           </button>
-          
+
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = getActivePage() === item.name
@@ -149,28 +132,12 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
                 <button
                   key={item.name}
                   onClick={() => router.push(item.path)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    backgroundColor: isActive ? (uiStyle === "minimal" ? '#94a3b8' : '#f1f5f9') : 'transparent',
-                    color: isActive ? '#1e293b' : '#64748b',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #6366f1, #818cf8, #c084fc, #a855f7)'
-                    e.currentTarget.style.backgroundSize = '300% 300%'
-                    e.currentTarget.style.animation = 'gradientShift 4s ease infinite'
-                    e.currentTarget.style.color = '#ffffff'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = isActive ? (uiStyle === "minimal" ? '#94a3b8' : '#f1f5f9') : 'transparent'
-                    e.currentTarget.style.backgroundSize = ''
-                    e.currentTarget.style.animation = ''
-                    e.currentTarget.style.color = isActive ? '#1e293b' : '#64748b'
-                  }}
+                  className={cn(
+                    "px-3 py-1.5 text-sm rounded-md transition-colors",
+                    isActive
+                      ? "bg-muted text-foreground font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
                 >
                   {item.name}
                 </button>
@@ -179,64 +146,52 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
           </nav>
         </div>
 
-        <div className="flex items-center gap-1 relative">
+        <div className="flex items-center gap-1">
           <div className="relative" ref={notificationRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors"
+              className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
             >
-              <Bell className="h-5 w-5" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
-                  {notificationCount > 9 ? "9+" : notificationCount}
-                </span>
+              <Bell className="h-4 w-4" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-foreground" />
               )}
             </button>
-            
+
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-                  <h3 className="font-semibold text-slate-800">Notifications</h3>
-                  <p className="text-xs text-slate-500">Last 24 hours</p>
+              <div className="absolute right-0 mt-2 w-72 bg-card rounded-lg border border-border shadow-lg overflow-hidden">
+                <div className="px-3 py-2.5 border-b border-border">
+                  <h3 className="text-sm font-medium">Notifications</h3>
+                  <p className="text-xs text-muted-foreground">Last 24 hours</p>
                 </div>
-                <div className="max-h-80 overflow-y-auto">
+                <div className="max-h-64 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="px-4 py-6 text-center text-sm text-slate-500">
-                      No new notifications
+                    <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                      No notifications
                     </div>
                   ) : (
                     notifications.map((notif) => (
-                      <div
+                      <button
                         key={notif.id}
                         onClick={() => {
                           setShowNotifications(false)
                           window.location.href = `/leads?id=${notif.id}`
                         }}
-                        className={cn(
-                          "px-4 py-3 cursor-pointer border-b border-slate-100 last:border-0 transition-colors",
-                          notif.type === "auto" && "border-l-4 border-l-amber-500"
-                        )}
-                        style={{ backgroundColor: 'transparent' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = notif.type === "auto" ? '#fef3c7' : '#f1f5f9'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent'
-                        }}
+                        className="w-full px-3 py-2.5 text-left border-b border-border last:border-0 hover:bg-muted transition-colors"
                       >
-                        <p className="text-sm text-slate-800 font-medium">{notif.text}</p>
-                        <p className="text-xs text-slate-500 mt-1">{notif.time}</p>
-                      </div>
+                        <p className="text-sm text-foreground">{notif.text}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{notif.time}</p>
+                      </button>
                     ))
                   )}
                 </div>
-                <div className="px-4 py-2 border-t border-slate-100 bg-slate-50">
-                  <button 
+                <div className="px-3 py-2 border-t border-border">
+                  <button
                     onClick={() => {
                       setShowNotifications(false)
                       router.push("/leads")
                     }}
-                    className="text-sm text-slate-600 hover:text-slate-800 font-medium"
+                    className="text-xs text-muted-foreground hover:text-foreground font-medium"
                   >
                     View all leads
                   </button>
@@ -245,40 +200,40 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
             )}
           </div>
 
-          <div className="h-8 w-px bg-slate-200 mx-2" />
+          <div className="h-5 w-px bg-border mx-1" />
 
           <div className="relative" ref={userMenuRef}>
-            <button 
+            <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className={cn("flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors", uiStyle === "minimal" ? "hover:bg-slate-200" : "hover:bg-blue-50")}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted transition-colors"
             >
-              <div className={cn("flex h-8 w-8 items-center justify-center rounded-full", uiStyle === "minimal" ? "bg-gradient-to-br from-slate-700 to-slate-800" : "bg-gradient-to-br from-blue-500 to-blue-700")}>
-                <User className="h-4 w-4 text-white" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                <User className="h-3.5 w-3.5" />
               </div>
-              <span className="hidden sm:block text-sm font-medium text-slate-600">{user?.name || "User"}</span>
-              <ChevronDown className="h-4 w-4 text-slate-400" />
+              <span className="hidden sm:block text-sm text-muted-foreground">{user?.name || "User"}</span>
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </button>
-            
+
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-100">
-                  <p className="font-medium text-slate-800">{user?.name || "User"}</p>
-                  <p className="text-xs text-slate-500">{user?.email || "user@example.com"}</p>
+              <div className="absolute right-0 mt-2 w-56 bg-card rounded-lg border border-border shadow-lg overflow-hidden">
+                <div className="px-3 py-2.5 border-b border-border">
+                  <p className="text-sm font-medium">{user?.name || "User"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.email || "user@example.com"}</p>
                 </div>
                 <div className="py-1">
-                  <button 
+                  <button
                     onClick={() => router.push("/settings")}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
                   >
                     <Settings className="h-4 w-4" />
                     Settings
                   </button>
-                  <button 
+                  <button
                     onClick={async () => {
                       await fetch("/api/auth", { method: "DELETE" })
                       router.push("/login")
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
                     Log out
@@ -290,6 +245,5 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
         </div>
       </div>
     </header>
-    </>
   )
 }

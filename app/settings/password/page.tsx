@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Lock, KeyRound, Save, Check, Loader2, Eye, EyeOff, X } from "lucide-react"
+import { ArrowLeft, Lock, Save, Check, Loader2, Eye, EyeOff, X } from "lucide-react"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { cn } from "@/lib/utils"
 
@@ -14,20 +14,15 @@ interface PasswordRequirement {
 const passwordRequirements: PasswordRequirement[] = [
   { label: "At least 8 characters", test: (p) => p.length >= 8 },
   { label: "One uppercase letter", test: (p) => /[A-Z]/.test(p) },
-  { label: "One lowercase letter", test: (p) => /[a-z]/.test(p) },
   { label: "One number", test: (p) => /\d/.test(p) },
-  { label: "One special character (!@#$%^&*)", test: (p) => /[!@#$%^&*]/.test(p) },
 ]
 
-function getPasswordStrength(password: string): { score: number; label: string; color: string } {
+function getPasswordStrength(password: string): { score: number; label: string } {
   const passed = passwordRequirements.filter((req) => req.test(password)).length
-  
-  if (password.length === 0) return { score: 0, label: "", color: "" }
-  if (passed <= 1) return { score: 1, label: "Weak", color: "bg-red-500" }
-  if (passed <= 2) return { score: 2, label: "Fair", color: "bg-orange-500" }
-  if (passed <= 3) return { score: 3, label: "Good", color: "bg-yellow-500" }
-  if (passed <= 4) return { score: 4, label: "Strong", color: "bg-emerald-500" }
-  return { score: 5, label: "Very strong", color: "bg-emerald-600" }
+  if (password.length === 0) return { score: 0, label: "" }
+  if (passed <= 1) return { score: 1, label: "Weak" }
+  if (passed <= 2) return { score: 2, label: "Fair" }
+  return { score: 3, label: "Strong" }
 }
 
 export default function PasswordPage() {
@@ -48,24 +43,16 @@ export default function PasswordPage() {
 
   const handleSave = async () => {
     setError(null)
-
     if (!currentPassword || !newPassword || !confirmPassword) {
       setError("All fields are required")
       return
     }
-
     if (!allRequirementsMet) {
       setError("Please meet all password requirements")
       return
     }
-
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match")
-      return
-    }
-
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters")
+      setError("Passwords do not match")
       return
     }
 
@@ -77,7 +64,6 @@ export default function PasswordPage() {
         body: JSON.stringify({ currentPassword, newPassword }),
       })
       const data = await res.json()
-      
       if (res.ok) {
         setSaved(true)
         setCurrentPassword("")
@@ -88,7 +74,6 @@ export default function PasswordPage() {
         setError(data.error || "Failed to change password")
       }
     } catch (err) {
-      console.error("Failed to change password:", err)
       setError("Failed to change password")
     } finally {
       setIsSaving(false)
@@ -97,95 +82,83 @@ export default function PasswordPage() {
 
   return (
     <ThemeBackground className="p-6">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-lg mx-auto space-y-5">
         <button
           onClick={() => router.push("/settings")}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer mb-6"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Settings
+          Back
         </button>
 
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-            <h1 className="text-xl font-semibold text-slate-800">Change Password</h1>
-            <p className="text-sm text-slate-500 mt-1">Update your password to keep your account secure</p>
-          </div>
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Password</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Update your password</p>
+        </div>
 
-          <div className="p-6 space-y-6">
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="p-5 space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div className="border border-destructive/30 text-destructive px-3 py-2 rounded-md text-sm bg-destructive/5">
                 {error}
               </div>
             )}
 
             {saved && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+              <div className="border border-border px-3 py-2 rounded-md text-sm flex items-center gap-2">
                 <Check className="h-4 w-4" />
-                Password changed successfully!
+                Password changed
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Current Password</label>
               <div className="relative">
                 <input
                   type={showCurrent ? "text" : "password"}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  className="w-full h-10 pl-10 pr-12 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full h-9 pl-3 pr-10 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground/20"
                 />
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <button
                   type="button"
                   onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                 >
-                  {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showCurrent ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">New Password</label>
               <div className="relative">
                 <input
                   type={showNew ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
-                  className="w-full h-10 pl-10 pr-12 rounded-lg border border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full h-9 pl-3 pr-10 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground/20"
                 />
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                 >
-                  {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showNew ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </button>
               </div>
-              
+
               {newPassword.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>Password strength:</span>
-                    <span className={cn(
-                      passwordStrength.score >= 4 ? "text-emerald-600 font-medium" :
-                      passwordStrength.score >= 2 ? "text-yellow-600 font-medium" :
-                      "text-red-600 font-medium"
-                    )}>
-                      {passwordStrength.label}
-                    </span>
-                  </div>
+                <div className="mt-2 space-y-2">
                   <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((level) => (
+                    {[1, 2, 3].map((level) => (
                       <div
                         key={level}
                         className={cn(
                           "h-1 flex-1 rounded-full transition-colors",
-                          level <= passwordStrength.score ? passwordStrength.color : "bg-slate-200"
+                          level <= passwordStrength.score
+                            ? passwordStrength.score === 1 ? "bg-destructive" : passwordStrength.score === 2 ? "bg-warning" : "bg-foreground"
+                            : "bg-muted"
                         )}
                       />
                     ))}
@@ -195,14 +168,14 @@ export default function PasswordPage() {
                       <li
                         key={index}
                         className={cn(
-                          "text-xs flex items-center gap-2 transition-colors",
-                          req.test(newPassword) ? "text-emerald-600" : "text-slate-400"
+                          "text-xs flex items-center gap-1.5",
+                          req.test(newPassword) ? "text-foreground" : "text-muted-foreground"
                         )}
                       >
                         {req.test(newPassword) ? (
                           <Check className="h-3 w-3" />
                         ) : (
-                          <div className="h-3 w-3 rounded-full border border-slate-400" />
+                          <div className="h-3 w-3 rounded-full border border-muted-foreground/30" />
                         )}
                         {req.label}
                       </li>
@@ -212,40 +185,38 @@ export default function PasswordPage() {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Confirm Password</label>
               <div className="relative">
                 <input
                   type={showConfirm ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
                   className={cn(
-                    "w-full h-10 pl-10 pr-12 rounded-lg border bg-white text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100",
-                    confirmPassword.length > 0 && !passwordsMatch ? "border-red-400" : "border-slate-200"
+                    "w-full h-9 pl-3 pr-10 rounded-md border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-foreground/20",
+                    confirmPassword.length > 0 && !passwordsMatch ? "border-destructive" : "border-border"
                   )}
                 />
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                 >
-                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirm ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </button>
               </div>
               {confirmPassword.length > 0 && !passwordsMatch && (
-                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                <p className="text-xs text-destructive flex items-center gap-1">
                   <X className="h-3 w-3" />
                   Passwords do not match
                 </p>
               )}
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <div className="flex justify-end gap-2 pt-3 border-t border-border">
               <button
                 onClick={() => router.push("/settings")}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
@@ -253,28 +224,14 @@ export default function PasswordPage() {
                 onClick={handleSave}
                 disabled={isSaving}
                 className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 cursor-pointer",
-                  saved 
-                    ? "bg-emerald-600 text-white" 
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                  "px-4 py-1.5 text-sm rounded-md transition-all flex items-center gap-1.5",
+                  saved
+                    ? "bg-foreground/80 text-background"
+                    : "bg-foreground text-background hover:bg-foreground/90"
                 )}
               >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : saved ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Saved!
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Change Password
-                  </>
-                )}
+                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                {saved ? "Saved" : "Save"}
               </button>
             </div>
           </div>

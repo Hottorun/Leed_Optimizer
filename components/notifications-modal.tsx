@@ -116,38 +116,40 @@ export function NotificationsModal({ open, onOpenChange }: NotificationsModalPro
           <div className="space-y-4">
             <Label htmlFor="notification-channels">Notification Channels</Label>
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100">
-                  <Mail className="h-4 w-4 text-blue-600" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">Email Notifications</span>
                 </div>
-                <span className="text-sm font-medium">Email Notifications</span>
+                <Switch
+                  checked={emailEnabled}
+                  onCheckedChange={setEmailEnabled}
+                />
               </div>
-              <Switch
-                checked={emailEnabled}
-                onCheckedChange={setEmailEnabled}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-100">
-                <Phone className="h-4 w-4 text-green-600" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted">
+                    <Phone className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">SMS Notifications</span>
+                </div>
+                <Switch
+                  checked={smsEnabled}
+                  onCheckedChange={setSmsEnabled}
+                />
               </div>
-              <span className="text-sm font-medium">SMS Notifications</span>
+              <div className="flex items-center justify-between">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted">
+                  <Bell className="h-4 w-4" />
+                </div>
+                <span className="text-sm font-medium">Push Notifications</span>
+                <Switch
+                  checked={pushEnabled}
+                  onCheckedChange={setPushEnabled}
+                />
               </div>
-              <Switch
-                checked={smsEnabled}
-                onCheckedChange={setSmsEnabled}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100">
-                <Bell className="h-4 w-4 text-purple-600" />
-              </div>
-              <span className="text-sm font-medium">Push Notifications</span>
-              </div>
-              <Switch
-                checked={pushEnabled}
-                onCheckedChange={setPushEnabled}
-              />
             </div>
           </div>
 
@@ -176,14 +178,14 @@ export function NotificationsModal({ open, onOpenChange }: NotificationsModalPro
           <div className="space-y-4">
             <Label htmlFor="frequency">Notification Frequency</Label>
             <div className="space-y-2">
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setNotificationFrequency("immediate")}
                   className={cn(
-                    "px-3 py-2 rounded-lg border text-sm font-medium transition-colors cursor-pointer",
+                    "px-3 py-1.5 rounded-md border text-sm transition-colors",
                     notificationFrequency === "immediate"
-                      ? "bg-blue-600 text-white"
-                      : "bg-background border-border hover:border-blue-600/50"
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border hover:border-foreground/30"
                   )}
                 >
                   Immediate
@@ -191,24 +193,24 @@ export function NotificationsModal({ open, onOpenChange }: NotificationsModalPro
                 <button
                   onClick={() => setNotificationFrequency("hourly")}
                   className={cn(
-                    "px-3 py-2 rounded-lg border text-sm font-medium transition-colors cursor-pointer",
+                    "px-3 py-1.5 rounded-md border text-sm transition-colors",
                     notificationFrequency === "hourly"
-                      ? "bg-blue-600 text-white"
-                      : "bg-background border-border hover:border-blue-600/50"
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border hover:border-foreground/30"
                   )}
                 >
-                  Hourly Digest
+                  Hourly
                 </button>
                 <button
                   onClick={() => setNotificationFrequency("daily")}
                   className={cn(
-                    "px-3 py-2 rounded-lg border text-sm font-medium transition-colors cursor-pointer",
+                    "px-3 py-1.5 rounded-md border text-sm transition-colors",
                     notificationFrequency === "daily"
-                      ? "bg-blue-600 text-white"
-                      : "bg-background border-border hover:border-blue-600/50"
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border hover:border-foreground/30"
                   )}
                 >
-                  Daily Digest
+                  Daily
                 </button>
               </div>
             </div>

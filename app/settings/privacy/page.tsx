@@ -140,7 +140,7 @@ export default function PrivacyPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="p-4 rounded-xl border border-blue-200 bg-blue-50">
+              <div className="p-6 rounded-2xl border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 shrink-0">
                     <Shield className="h-5 w-5 text-blue-600" />
@@ -160,43 +160,43 @@ export default function PrivacyPage() {
                     {section.category}
                   </h3>
                   <div className="space-y-3">
-                    {section.items.map((item) => {
-                      const Icon = item.icon
-                      const isEnabled = preferences[item.key] as boolean
-                      const StatusIcon = isEnabled ? item.enabledIcon : item.disabledIcon
-                      return (
-                        <div
-                          key={item.key}
-                          className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
-                                <Icon className="h-5 w-5 text-slate-600" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-slate-800">{item.title}</p>
-                                <p className="text-sm text-slate-500">{item.description}</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleToggle(item.key)}
-                              className={cn(
-                                "relative w-12 h-6 rounded-full transition-colors cursor-pointer",
-                                isEnabled ? "bg-blue-500" : "bg-slate-200"
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  "absolute top-1 w-4 h-4 bg-white rounded-full transition-transform",
-                                  isEnabled ? "left-7" : "left-1"
-                                )}
-                              />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
+                     {section.items.map((item) => {
+                       const Icon = item.icon
+                       const isEnabled = preferences[item.key] as boolean
+                       const StatusIcon = isEnabled ? item.enabledIcon : item.disabledIcon
+                       return (
+                         <div
+                           key={item.key}
+                           className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-sm"
+                         >
+                           <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-4">
+                               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/20">
+                                 <Icon className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+                               </div>
+                               <div>
+                                 <p className="font-medium text-slate-800 dark:text-white">{item.title}</p>
+                                 <p className="text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
+                               </div>
+                             </div>
+                             <button
+                               onClick={() => handleToggle(item.key)}
+                               className={cn(
+                                 "relative w-12 h-6 rounded-full transition-colors cursor-pointer shadow-sm",
+                                 isEnabled ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-200 hover:bg-slate-300"
+                               )}
+                             >
+                               <span
+                                 className={cn(
+                                   "absolute top-1 w-4 h-4 bg-white rounded-full transition-transform",
+                                   isEnabled ? "left-7" : "left-1"
+                                 )}
+                               />
+                             </button>
+                           </div>
+                         </div>
+                       )
+                     })}
                   </div>
                 </div>
               ))}
@@ -217,27 +217,27 @@ export default function PrivacyPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {dataRetentionOptions.map((days) => (
-                      <button
-                        key={days}
-                        onClick={() => handleDataRetentionChange(days)}
-                        className={cn(
-                          "px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
-                          preferences.dataRetentionDays === days
-                            ? "bg-blue-600 text-white"
-                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                        )}
-                      >
-                        {days} days
-                      </button>
-                    ))}
-                  </div>
-                  {preferences.dataRetentionDays === 365 && (
-                    <p className="text-xs text-slate-500 mt-2">
-                      Note: Very long retention periods may affect performance.
-                    </p>
-                  )}
+                   <div className="flex gap-2 flex-wrap">
+                     {dataRetentionOptions.map((days) => (
+                       <button
+                         key={days}
+                         onClick={() => handleDataRetentionChange(days)}
+                         className={cn(
+                           "px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer border",
+                           preferences.dataRetentionDays === days
+                             ? "bg-blue-600 text-white border-blue-600"
+                             : "bg-white dark:bg-slate-800 text-slate-200 dark:text-slate-100 border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
+                         )}
+                       >
+                         {days} days
+                       </button>
+                     ))}
+                   </div>
+                   {preferences.dataRetentionDays === 365 && (
+                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                       Note: Very long retention periods may affect performance.
+                     </p>
+                   )}
                 </div>
               </div>
 
@@ -246,7 +246,7 @@ export default function PrivacyPage() {
                   Your Rights
                 </h3>
                 <div className="space-y-3">
-                  <div className="p-4 rounded-xl border border-slate-200 bg-white">
+               <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-slate-800">Request Your Data</p>
