@@ -50,7 +50,10 @@ async function getCurrentUser(): Promise<User | null> {
 export async function GET() {
   try {
     const user = await getCurrentUser()
-    const leads = await getLeads(user?.teamId)
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const leads = await getLeads(user.teamId)
     
     const filteredLeads = (leads || []).filter((l: Lead) => {
       const status = l.session?.status

@@ -69,7 +69,7 @@ export async function POST(
     
     const updatedSession = await updateLeadSession(session.id, {
       status: "completed",
-      rating: action === "approve",
+      rating: action === "approve" ? 5 : action === "decline" ? 1 : null,
       ratingReason,
     })
 

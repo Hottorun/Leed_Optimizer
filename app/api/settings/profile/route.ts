@@ -24,25 +24,23 @@ async function getCurrentUser(): Promise<User | null> {
 export async function GET() {
   try {
     const user = await getCurrentUser()
-    console.log("Profile API - user from cookie:", user)
     if (!user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const profile = await getUserProfile(user.id)
-    console.log("Profile API - profile from DB:", profile)
-    
+
     // If no profile found, return basic info from auth
     if (!profile) {
-      console.log("Profile API - falling back to auth token")
       const cookieStore = await cookies()
       const token = cookieStore.get("auth_token")
       let userData = user
       if (token) {
         try {
           userData = JSON.parse(token.value) as User
-          console.log("Profile API - parsed token:", userData)
-        } catch {}
+        } catch {
+          // malformed cookie — fall back to in-memory user
+        }
       }
       return NextResponse.json({
         name: userData.name || "",

@@ -775,19 +775,24 @@ function LeadsContent() {
 
               <div className="flex items-center gap-3">
                 {/* Sort */}
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="h-9 pl-3 pr-8 rounded-md border border-border text-sm appearance-none cursor-pointer"
-                    style={{ backgroundColor: "var(--card)", color: "var(--foreground)" }}
-                  >
-                    <option value="rating-high">Rating</option>
-                    <option value="newest">Newest</option>
-                    <option value="oldest">Oldest</option>
-                    <option value="name-az">Name A-Z</option>
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Sort by:</span>
+                  <div className="relative">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortOption)}
+                      className="h-9 pl-3 pr-8 rounded-md border border-border text-sm appearance-none cursor-pointer"
+                      style={{ backgroundColor: "var(--card)", color: "var(--foreground)" }}
+                    >
+                      <option value="rating-high">Rating: High → Low</option>
+                      <option value="rating-low">Rating: Low → High</option>
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                      <option value="name-az">Name A → Z</option>
+                      <option value="name-za">Name Z → A</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  </div>
                 </div>
 
                 {/* View Toggle */}

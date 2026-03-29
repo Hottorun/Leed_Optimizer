@@ -83,7 +83,7 @@ export function useThemeGradient() {
  }
 
 export function ThemeBackground({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-   const [isDark, setIsDark] = useState(false)
+   const [isDark, setIsDark] = useState(getInitialDarkMode)
 
    useEffect(() => {
      const checkDark = () => {

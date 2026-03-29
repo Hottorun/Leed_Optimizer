@@ -39,6 +39,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark');}catch(e){}` }} />
+      </head>
       <body className={`${dmSans.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"

@@ -18,7 +18,7 @@ import type { Lead } from "@/lib/types"
 export default function DashboardPage() {
   const router = useRouter()
   const { theme } = useTheme()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string; name: string; email: string; role: string; teamId?: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [leads, setLeads] = useState<Lead[]>([])
@@ -37,7 +37,7 @@ export default function DashboardPage() {
     ])
       .then(([authData, leadsData]) => {
         setUser(authData.user)
-        setLeads(leadsData || [])
+        setLeads(Array.isArray(leadsData) ? leadsData : [])
         if (!authData.user) {
           router.push("/login")
         }
