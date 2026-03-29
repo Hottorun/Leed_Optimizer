@@ -46,11 +46,6 @@ function getInitialBackgroundStyle(): BackgroundStyle {
   return (localStorage.getItem("backgroundStyle") as BackgroundStyle) || "gradient"
 }
 
-function getInitialDarkMode(): boolean {
-  if (typeof window === "undefined") return false
-  const theme = localStorage.getItem("theme")
-  return theme === "dark" || document.documentElement.classList.contains("dark")
-}
 
 export function useThemeGradient() {
    const [gradient] = useState<ThemeGradient>(themeGradients.blue)
@@ -83,41 +78,9 @@ export function useThemeGradient() {
  }
 
 export function ThemeBackground({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-   const [isDark, setIsDark] = useState(getInitialDarkMode)
-
-   useEffect(() => {
-     const checkDark = () => {
-       const storedTheme = localStorage.getItem("theme")
-       const hasDarkClass = document.documentElement.classList.contains("dark")
-       setIsDark(storedTheme === "dark" || hasDarkClass)
-     }
-     
-     checkDark()
-     
-     const observer = new MutationObserver(checkDark)
-     observer.observe(document.documentElement, { 
-       attributes: true, 
-       attributeFilter: ["class"] 
-     })
-     
-     window.addEventListener("storage", checkDark)
-     return () => {
-       observer.disconnect()
-       window.removeEventListener("storage", checkDark)
-     }
-   }, [])
-
-   const getBackgroundStyle = (): React.CSSProperties => {
-     if (isDark) return { background: "#0f172a" }
-     
-     return { background: "#F6F8FA" }
-   }
-
    return (
-     <div 
-       className={`min-h-screen transition-colors duration-300 ${className}`}
-       style={getBackgroundStyle()}
-       suppressHydrationWarning
+     <div
+       className={`min-h-screen bg-background ${className}`}
      >
        {children}
      </div>

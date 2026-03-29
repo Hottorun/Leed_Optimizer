@@ -763,7 +763,7 @@ function mapDbSessionToSession(row: {
     leadsId: row.leads_id,
     status: row.status as LeadSession["status"],
     currentStep: row.current_step,
-    collectedData: row.collected_data || {},
+    collectedData: getCollectedDataFirst(row.collected_data),
     needsMoreInfo: row.needs_more_info ?? true,
     rating: row.rating ?? null,
     ratingReason: row.rating_reason ?? null,

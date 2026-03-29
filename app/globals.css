@@ -101,7 +101,12 @@ html.dark {
   --theme-secondary: 161 161 170;
 }
 
-/* Fallback: ensure dark mode body styles */
+/* Ensure html and body always reflect theme background to prevent flash */
+html, body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 html.dark body {
   background-color: var(--background);
   color: var(--foreground);

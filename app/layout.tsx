@@ -40,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="de" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `try{var m=localStorage.getItem('mode'),t=localStorage.getItem('theme');if(m==='dark'||(m!=='light'&&t==='dark')){document.documentElement.classList.add('dark');document.documentElement.setAttribute('data-mode','dark');}else{document.documentElement.setAttribute('data-mode','light');}if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{var m=localStorage.getItem('mode'),t=localStorage.getItem('theme');if(m==='dark'||(m!=='light'&&t==='dark')){document.documentElement.classList.add('dark');document.documentElement.setAttribute('data-mode','dark');document.documentElement.style.background='#030303';document.documentElement.style.colorScheme='dark';}else{document.documentElement.setAttribute('data-mode','light');document.documentElement.style.background='#F5F5F4';}if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}` }} />
       </head>
       <body className={`${dmSans.variable} font-sans antialiased`}>
         <ThemeProvider
