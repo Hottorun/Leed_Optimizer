@@ -743,9 +743,9 @@ html.dark[data-theme="minimal"] {
 [data-mode="dark"] textarea,
 .dark select,
 [data-mode="dark"] select {
-  background-color: #141414 !important;
-  color: #FAFAFA !important;
-  border-color: #27272A !important;
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
 }
 
 .dark .shadow-sm,
@@ -1000,4 +1000,14 @@ html.dark .bg-gradient-to-b.from-white {
 
 html.dark body {
   background-color: #0B0F19 !important;
+}
+
+/* Animated gradient border */
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
 }
