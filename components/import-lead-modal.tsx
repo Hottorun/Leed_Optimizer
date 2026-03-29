@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { X } from "lucide-react"
+import { X, MessageSquare, Mail, Globe } from "lucide-react"
+
+type LeadSource = "whatsapp" | "email" | "other"
 
 interface ImportLeadModalProps {
   isOpen: boolean
@@ -18,6 +20,8 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
     location: "",
     workType: "",
     message: "",
+    source: "email" as LeadSource,
+    conversationSummary: "",
   })
   const [error, setError] = useState("")
 
@@ -27,6 +31,12 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
     e.preventDefault()
     setIsLoading(true)
     setError("")
+
+    if (!formData.email && !formData.phone) {
+      setError("Either email or phone is required")
+      setIsLoading(false)
+      return
+    }
 
     try {
       const response = await fetch("/api/leads", {
@@ -47,6 +57,8 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
         location: "",
         workType: "",
         message: "",
+        source: "email",
+        conversationSummary: "",
       })
       onSuccess()
       onClose()
@@ -56,6 +68,12 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
       setIsLoading(false)
     }
   }
+
+  const sourceOptions: { value: LeadSource; label: string; icon: typeof MessageSquare }[] = [
+    { value: "whatsapp", label: "WhatsApp", icon: MessageSquare },
+    { value: "email", label: "Email", icon: Mail },
+    { value: "other", label: "Other", icon: Globe },
+  ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -92,14 +110,36 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-slate-800 mb-1">
+              Source <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {sourceOptions.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, source: value })}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    formData.source === value
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-slate-300 text-slate-600 hover:border-slate-400"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-800 mb-1">
-                Email <span className="text-red-500">*</span>
+                Email
               </label>
               <input
                 type="email"
-                required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 text-slate-800 placeholder:text-slate-400"
@@ -108,11 +148,10 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-800 mb-1">
-                Phone <span className="text-red-500">*</span>
+                Phone
               </label>
               <input
                 type="tel"
-                required
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 text-slate-800 placeholder:text-slate-400"
@@ -120,6 +159,9 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
               />
             </div>
           </div>
+          {(!formData.email && !formData.phone) && (
+            <p className="text-xs text-red-500 -mt-2">Either email or phone is required</p>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -150,14 +192,27 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
 
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">
+              Conversation Summary
+            </label>
+            <textarea
+              value={formData.conversationSummary}
+              onChange={(e) => setFormData({ ...formData, conversationSummary: e.target.value })}
+              rows={2}
+              className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none text-slate-800 placeholder:text-slate-400"
+              placeholder="Brief summary of the lead's inquiry..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-800 mb-1">
               Message
             </label>
             <textarea
               value={formData.message}
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              rows={3}
+              rows={2}
               className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none text-slate-800 placeholder:text-slate-400"
-              placeholder="Brief description of what they need..."
+              placeholder="Full message from the lead..."
             />
           </div>
 
@@ -171,7 +226,7 @@ export function ImportLeadModal({ isOpen, onClose, onSuccess }: ImportLeadModalP
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (!formData.email && !formData.phone)}
               className="flex-1 px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors disabled:opacity-50"
             >
               {isLoading ? "Importing..." : "Import Lead"}

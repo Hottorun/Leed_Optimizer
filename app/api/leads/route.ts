@@ -34,36 +34,41 @@ export async function POST(request: Request) {
 
     const {
       name, phone, email, location, workType, message, company, budget, timeline,
-      contactPlatform
+      source, conversationSummary
     } = body
 
-    if (!name || !phone || !email) {
+    if (!name) {
       return NextResponse.json(
-        {
-          error: "Missing required fields",
-          required: ["name", "phone", "email"]
-        },
+        { error: "Missing required fields", required: ["name"] },
+        { status: 400 }
+      )
+    }
+
+    if (!phone && !email) {
+      return NextResponse.json(
+        { error: "Either email or phone is required" },
         { status: 400 }
       )
     }
 
     const collectedData: CollectedData = {
+      source: source || "email",
       name,
-      phone,
-      email,
+      ...(phone && { phone }),
+      ...(email && { email }),
       ...(location && { location }),
       ...(workType && { workType }),
       ...(message && { message }),
+      ...(conversationSummary && { conversationSummary }),
       ...(company && { company }),
       ...(budget && { budget }),
       ...(timeline && { timeline }),
-      ...(contactPlatform && { contactPlatform }),
     }
 
     const newLead = await addLead({
       name,
-      phone,
-      email,
+      phone: phone || "",
+      email: email || "",
       collectedData,
       teamId: user.teamId,
     })

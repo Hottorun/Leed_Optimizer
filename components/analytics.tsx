@@ -41,9 +41,22 @@ export function Analytics({ leads }: AnalyticsProps) {
     { label: "Approval Rate", value: `${approvalRate}%` },
   ]
 
+  const getCollectedDataFirst = (collectedData: Record<string, unknown> | Record<string, unknown>[] | null | undefined): Record<string, unknown> => {
+    if (!collectedData) return {}
+    if (Array.isArray(collectedData)) return collectedData[0] || {}
+    return collectedData
+  }
+
+  const getLeadSource = (lead: Lead): string => {
+    const collectedData = getCollectedDataFirst(lead.session?.collectedData)
+    if (collectedData?.source) return collectedData.source as string
+    if (lead.phone) return "whatsapp"
+    return "email"
+  }
+
   const sourceData = useMemo(() => {
-    const whatsappCount = leads.filter(l => l.source === 'whatsapp' || l.phone).length
-    const emailCount = leads.filter(l => l.source === 'email' || l.email).length
+    const whatsappCount = leads.filter(l => getLeadSource(l) === 'whatsapp').length
+    const emailCount = leads.filter(l => getLeadSource(l) === 'email').length
     return [
       { source: "WhatsApp", value: whatsappCount },
       { source: "Email", value: emailCount },

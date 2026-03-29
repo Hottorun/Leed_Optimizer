@@ -1,6 +1,6 @@
 "use client"
 
-import { Star } from "lucide-react"
+import { Star, MessageSquare, Mail } from "lucide-react"
 import type { Lead } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -10,12 +10,26 @@ interface LeadSquareCardProps {
   isSelected: boolean
 }
 
+function getCollectedDataFirst(collectedData: Record<string, unknown> | Record<string, unknown>[] | null | undefined): Record<string, unknown> {
+  if (!collectedData) return {}
+  if (Array.isArray(collectedData)) return collectedData[0] || {}
+  return collectedData
+}
+
+function getLeadSource(lead: Lead): string {
+  const collectedData = getCollectedDataFirst(lead.session?.collectedData)
+  if (collectedData?.source) return collectedData.source as string
+  if (lead.phone) return "whatsapp"
+  return "email"
+}
+
 export function LeadSquareCard({ lead, onClick, isSelected }: LeadSquareCardProps) {
   const session = lead.session
   const sessionStatus = session?.status || "active"
   const collectedData = session?.collectedData || {}
   const workType = collectedData.workType || "Not specified"
   const rating = session?.rating ?? undefined
+  const source = getLeadSource(lead)
 
   const initials = lead.name
     .split(" ")
@@ -60,6 +74,14 @@ export function LeadSquareCard({ lead, onClick, isSelected }: LeadSquareCardProp
             ))}
           </div>
         )}
+
+        <div className="flex items-center gap-1 text-muted-foreground" title={source === "whatsapp" ? "WhatsApp" : "Email"}>
+          {source === "whatsapp" ? (
+            <MessageSquare className="h-3 w-3" />
+          ) : (
+            <Mail className="h-3 w-3" />
+          )}
+        </div>
       </div>
 
       <div className={cn(

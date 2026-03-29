@@ -158,9 +158,42 @@ export async function addLead(lead: {
 }): Promise<Lead | null> {
   const client = getSupabase()
   
-  const existingLeads = await getLeads(lead.teamId)
-  const leadCount = existingLeads.filter(l => l.phone === lead.phone).length + 1
-  const isLoyal = leadCount >= 3
+  let leadCount = 1
+  let isLoyal = false
+
+  if (client && lead.teamId) {
+    let query = client.from("leads").select("lead_count").eq("teams_id", lead.teamId)
+    
+    if (lead.phone && lead.email) {
+      query = query.or(`phone.eq.${lead.phone},email.eq.${lead.email}`)
+    } else if (lead.phone) {
+      query = query.eq("phone", lead.phone)
+    } else if (lead.email) {
+      query = query.eq("email", lead.email)
+    }
+
+    const { data: existingLeads } = await query
+    
+    if (existingLeads && existingLeads.length > 0) {
+      const maxCount = Math.max(...existingLeads.map(l => l.lead_count || 1))
+      leadCount = maxCount + 1
+      isLoyal = leadCount >= 3
+    }
+  } else {
+    const existingLeads = await getLeads(lead.teamId)
+    const matches = existingLeads.filter(l => 
+      (lead.phone && l.phone === lead.phone) || 
+      (lead.email && l.email === lead.email)
+    )
+    if (matches.length > 0) {
+      const maxCount = Math.max(...matches.map(l => l.leadCount || 1))
+      leadCount = maxCount + 1
+      isLoyal = leadCount >= 3
+    }
+  }
+
+  const sourceFromCollected = lead.collectedData?.source as "whatsapp" | "email" | undefined
+  const derivedSource: "whatsapp" | "email" = sourceFromCollected || (lead.phone ? "whatsapp" : "email")
 
   if (!client) {
     const newLead: Lead = {
@@ -176,7 +209,7 @@ export async function addLead(lead: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: "pending",
-      source: lead.phone ? "whatsapp" : "email",
+      source: derivedSource,
       rating: 0,
     }
     inMemoryLeads.unshift(newLead)
@@ -632,6 +665,12 @@ export async function updateUserSettings(userId: string, settings: Partial<UserS
   }
 }
 
+function getCollectedDataFirst(collectedData: CollectedData | CollectedData[] | null | undefined): CollectedData {
+  if (!collectedData) return {}
+  if (Array.isArray(collectedData)) return collectedData[0] || {}
+  return collectedData
+}
+
 function mapDbLeadToLead(
   row: {
     id: string
@@ -648,7 +687,9 @@ function mapDbLeadToLead(
   },
   session?: LeadSession
 ): Lead {
-  const collected = session?.collectedData || {}
+  const collected = getCollectedDataFirst(session?.collectedData)
+  const sourceFromSession = collected.source as "whatsapp" | "email" | undefined
+  const derivedSource: "whatsapp" | "email" = sourceFromSession || (row.phone ? "whatsapp" : "email")
   return {
     id: row.id,
     name: row.name || "",
@@ -663,7 +704,7 @@ function mapDbLeadToLead(
     teamId: row.teams_id ?? undefined,
     session,
     status: session?.status || "pending",
-    source: row.phone ? "whatsapp" : "email",
+    source: derivedSource,
     rating: session?.rating ?? 0,
     ratingReason: session?.ratingReason ?? undefined,
     workType: collected.workType,

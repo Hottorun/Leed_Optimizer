@@ -97,7 +97,15 @@ function LeadsContent() {
 
   const getLeadRating = (lead: Lead): number => lead.session?.rating ?? lead.rating ?? 0
   const getLeadStatus = (lead: Lead): string => lead.session?.status || lead.status || "pending"
+  const getCollectedDataFirst = (collectedData: Record<string, unknown> | Record<string, unknown>[] | null | undefined): Record<string, unknown> => {
+    if (!collectedData) return {}
+    if (Array.isArray(collectedData)) return collectedData[0] || {}
+    return collectedData
+  }
+
   const getLeadSource = (lead: Lead): string => {
+    const collectedData = getCollectedDataFirst(lead.session?.collectedData)
+    if (collectedData?.source) return collectedData.source as string
     if (lead.phone) return "whatsapp"
     if (lead.email) return "email"
     return ""

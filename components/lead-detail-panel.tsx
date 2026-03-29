@@ -37,7 +37,15 @@ function formatDate(dateString: string): string {
   })
 }
 
+function getCollectedDataFirst(collectedData: Record<string, unknown> | Record<string, unknown>[] | null | undefined): Record<string, unknown> {
+  if (!collectedData) return {}
+  if (Array.isArray(collectedData)) return collectedData[0] || {}
+  return collectedData
+}
+
 function getLeadSource(lead: Lead): LeadSource {
+  const collectedData = getCollectedDataFirst(lead.session?.collectedData)
+  if (collectedData?.source) return collectedData.source as LeadSource
   if (lead.phone) return "whatsapp"
   return "email"
 }
@@ -57,7 +65,7 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
 
   const status = lead.session?.status || lead.status
   const rating = lead.session?.rating ?? lead.rating ?? 0
-  const source = lead.phone ? "whatsapp" : "email"
+  const source = getLeadSource(lead)
   const collectedData = lead.session?.collectedData || {}
 
   const handleSend = async (action: "approve" | "decline") => {
@@ -163,20 +171,24 @@ export function LeadDetailPanel({ lead, onClose, onSendMessage }: LeadDetailPane
 
           {/* Contact Info */}
           <div className="space-y-2">
-            <div className="flex items-center gap-3 rounded-md border border-border p-3">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Phone</p>
-                <p className="text-sm font-medium">{lead.phone}</p>
+            {lead.phone && (
+              <div className="flex items-center gap-3 rounded-md border border-border p-3">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="text-sm font-medium">{lead.phone}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-md border border-border p-3">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="text-sm font-medium">{lead.email}</p>
+            )}
+            {lead.email && (
+              <div className="flex items-center gap-3 rounded-md border border-border p-3">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="text-sm font-medium">{lead.email}</p>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex items-center gap-3 rounded-md border border-border p-3">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <div>
