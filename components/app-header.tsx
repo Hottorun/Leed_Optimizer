@@ -63,6 +63,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
     { name: "Dashboard", path: "/dashboard" },
     { name: "Leads", path: "/leads" },
     { name: "Analytics", path: "/analytics" },
+    { name: "Settings", path: "/settings" },
   ]
 
   const getTimeAgo = (dateString: string) => {

@@ -17,6 +17,12 @@ import {
   Pencil,
   Trash2,
   ChevronDown,
+  Sparkles,
+  DollarSign,
+  Calendar,
+  Zap,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -58,16 +64,44 @@ function getLeadRating(lead: Lead): number {
   return lead.session?.rating ?? lead.rating ?? 0
 }
 
-function getLeadStatus(lead: Lead): string {
-  return lead.session?.status || lead.status || "pending"
-}
-
 const STATUS_OPTIONS: { value: LeadStatus; label: string; className: string }[] = [
   { value: "pending", label: "Pending", className: "bg-[var(--status-pending-bg)] text-[var(--status-pending)]" },
   { value: "approved", label: "Approved", className: "bg-[var(--status-approved-bg)] text-[var(--status-approved)]" },
   { value: "declined", label: "Declined", className: "bg-[var(--status-declined-bg)] text-[var(--status-declined)]" },
   { value: "manual", label: "Manual", className: "bg-[var(--status-manual-bg)] text-[var(--status-manual)]" },
 ]
+
+function AISignalTags({ lead, collectedData }: { lead: Lead; collectedData: CollectedData }) {
+  const tags: { label: string; icon: React.ReactNode; variant: "positive" | "neutral" | "warning" }[] = []
+
+  if (collectedData.budget) tags.push({ label: "Budget shared", icon: <DollarSign className="h-3 w-3" />, variant: "positive" })
+  if (collectedData.timeline) tags.push({ label: "Timeline set", icon: <Calendar className="h-3 w-3" />, variant: "positive" })
+  if (collectedData.location || lead.location) tags.push({ label: "Location known", icon: <MapPin className="h-3 w-3" />, variant: "positive" })
+  if ((lead.session?.rating ?? 0) >= 4) tags.push({ label: "Strong signal", icon: <Zap className="h-3 w-3" />, variant: "positive" })
+  if (lead.session?.needsMoreInfo) tags.push({ label: "Info needed", icon: <AlertCircle className="h-3 w-3" />, variant: "warning" })
+  if (!collectedData.budget) tags.push({ label: "Budget unknown", icon: <DollarSign className="h-3 w-3" />, variant: "neutral" })
+
+  if (tags.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tags.slice(0, 4).map((tag, i) => (
+        <span
+          key={i}
+          className={cn(
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium",
+            tag.variant === "positive" && "bg-[var(--status-approved-bg)] text-[var(--status-approved)]",
+            tag.variant === "neutral" && "bg-muted text-muted-foreground",
+            tag.variant === "warning" && "bg-[var(--status-pending-bg)] text-[var(--status-pending)]",
+          )}
+        >
+          {tag.icon}
+          {tag.label}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDelete }: LeadDetailPanelProps) {
   const [approveMessage, setApproveMessage] = useState("")
@@ -86,7 +120,7 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
   })
 
   const status = lead.session?.status || lead.status
-  const rating = lead.session?.rating ?? lead.rating ?? 0
+  const rating = getLeadRating(lead)
   const source = getLeadSource(lead)
   const collectedData = getCollectedDataFirst(lead.session?.collectedData)
 
@@ -125,14 +159,14 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
       budget: editForm.budget,
       timeline: editForm.timeline,
     }
-    
+
     await onUpdate({
       name: editForm.name,
       workType: editForm.workType,
       location: editForm.location,
       conversationSummary: editForm.conversationSummary,
     } as Partial<Lead>)
-    
+
     if (lead.session?.id) {
       await fetch(`/api/leads/${lead.id}/session`, {
         method: "PATCH",
@@ -140,23 +174,32 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
         body: JSON.stringify({ collectedData: updatedCollectedData }),
       })
     }
-    
+
     setIsEditing(false)
   }
 
   const isActionable = status === "pending" || status === "manual"
   const sourceLabel = source === "whatsapp" ? "WhatsApp" : "Email"
   const currentStatusOption = STATUS_OPTIONS.find(s => s.value === status)
+  const ratingReason = lead.session?.ratingReason || lead.ratingReason
+
+  // Convert 1-5 rating to 0-100 score
+  const aiScore = Math.round((rating / 5) * 100)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+
+      {/* Panel */}
       <div
-        className="relative w-full max-w-xl max-h-[90vh] overflow-hidden rounded-lg border border-border bg-card shadow-xl"
+        className="relative w-full max-w-md h-full overflow-hidden bg-card border-l border-border shadow-2xl flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-4 py-3 shrink-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium">Lead Details</h2>
+            <h2 className="text-sm font-semibold">Lead Details</h2>
             <Button
               variant="ghost"
               size="icon"
@@ -176,10 +219,11 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 max-h-[calc(90vh-56px)]">
-          {/* Header */}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {/* Header — Name, Source, Status */}
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
               {lead.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -223,6 +267,38 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
               </div>
             </div>
           </div>
+
+          {/* AI Score + Stars */}
+          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={cn(
+                      "h-3.5 w-3.5",
+                      i < rating ? "text-yellow-400 fill-yellow-400" : "text-muted"
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-muted-foreground">{rating}/5</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">AI Score</span>
+              <span className={cn(
+                "text-sm font-semibold tabular-nums px-2 py-0.5 rounded-md",
+                aiScore >= 70 ? "bg-[var(--status-approved-bg)] text-[var(--status-approved)]" :
+                aiScore >= 40 ? "bg-[var(--status-pending-bg)] text-[var(--status-pending)]" :
+                "bg-muted text-muted-foreground"
+              )}>
+                {aiScore}
+              </span>
+            </div>
+          </div>
+
+          {/* AI Signal Tags */}
+          <AISignalTags lead={lead} collectedData={collectedData} />
 
           {/* Edit Form */}
           {isEditing && (
@@ -312,52 +388,64 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
             </div>
           )}
 
-          {/* Rating */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-0.5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star
-                  key={i}
-                  className={cn(
-                    "h-4 w-4",
-                    i < rating ? "text-yellow-400 fill-yellow-400" : "text-muted"
-                  )}
-                />
-              ))}
-            </div>
-            <span className="text-sm font-medium">{rating}/5</span>
-            {lead.session?.ratingReason && (
-              <span className="text-sm text-muted-foreground">- {lead.session.ratingReason}</span>
-            )}
-          </div>
-
-          {/* AI Analysis Grid */}
+          {/* Key Data Grid */}
           <div className="grid grid-cols-3 gap-2">
             <div className="flex flex-col items-center gap-1 rounded-md border border-border bg-muted/50 p-3 text-center">
-              <span className="text-base font-semibold">{collectedData.timeline || "N/A"}</span>
+              <span className={cn(
+                "text-sm font-semibold",
+                !collectedData.timeline && "text-muted-foreground"
+              )}>
+                {collectedData.timeline || "—"}
+              </span>
               <span className="text-xs text-muted-foreground">Timeline</span>
+              {!collectedData.timeline && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors underline"
+                >
+                  Add
+                </button>
+              )}
             </div>
             <div className="flex flex-col items-center gap-1 rounded-md border border-border bg-muted/50 p-3 text-center">
-              <span className="text-base font-semibold">{collectedData.budget || "N/A"}</span>
+              <span className={cn(
+                "text-sm font-semibold",
+                !collectedData.budget && "text-muted-foreground"
+              )}>
+                {collectedData.budget || "—"}
+              </span>
               <span className="text-xs text-muted-foreground">Budget</span>
+              {!collectedData.budget && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors underline"
+                >
+                  Add
+                </button>
+              )}
             </div>
             <div className="flex flex-col items-center gap-1 rounded-md border border-border bg-muted/50 p-3 text-center">
-              <span className="text-base font-semibold">{lead.session?.needsMoreInfo ? "Info needed" : "Ready"}</span>
-              <span className="text-xs text-muted-foreground">Info Status</span>
+              <span className="text-sm font-semibold">{lead.session?.needsMoreInfo ? "Needed" : "Ready"}</span>
+              <span className="text-xs text-muted-foreground">Info</span>
             </div>
           </div>
 
           {/* AI Recommendation */}
-          <div className="rounded-md border border-border p-3">
-            <div className="text-xs font-medium text-muted-foreground mb-1">AI Recommendation</div>
-            <p className="text-sm">{lead.session?.ratingReason || lead.ratingReason || "No recommendation yet"}</p>
-          </div>
+          {ratingReason && (
+            <div className="rounded-md border border-border p-3 bg-muted/20">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI Recommendation
+              </div>
+              <p className="text-sm leading-relaxed">{ratingReason}</p>
+            </div>
+          )}
 
           {/* Contact Info */}
           <div className="space-y-2">
             {lead.phone && (
               <div className="flex items-center gap-3 rounded-md border border-border p-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-xs text-muted-foreground">Phone</p>
                   <p className="text-sm font-medium">{lead.phone}</p>
@@ -369,7 +457,7 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
                 href={`mailto:${lead.email}`}
                 className="flex items-center gap-3 rounded-md border border-border p-3 hover:bg-muted/50 transition-colors group"
               >
-                <Mail className="h-4 w-4 text-muted-foreground" />
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-xs text-muted-foreground">Email</p>
                   <p className="text-sm font-medium text-foreground group-hover:underline">{lead.email}</p>
@@ -377,93 +465,120 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
               </a>
             )}
             <div className="flex items-center gap-3 rounded-md border border-border p-3">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Location</p>
-                <p className="text-sm font-medium">{collectedData.location || lead.location || "Not specified"}</p>
+                <p className="text-sm font-medium">
+                  {collectedData.location || lead.location || (
+                    <button onClick={() => setIsEditing(true)} className="text-muted-foreground hover:text-foreground underline">
+                      Not detected — add
+                    </button>
+                  )}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Conversation Summary */}
-          <div className="rounded-md border border-border p-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
-              <MessageSquare className="h-3.5 w-3.5" />
-              Conversation Summary
+          {(lead.conversationSummary || collectedData.conversationSummary) && (
+            <div className="rounded-md border border-border p-3">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Conversation Summary
+              </div>
+              <p className="text-sm leading-relaxed">
+                {lead.conversationSummary || collectedData.conversationSummary}
+              </p>
             </div>
-            <p className="text-sm leading-relaxed">
-              {lead.conversationSummary || collectedData.conversationSummary || "No conversation summary available"}
-            </p>
-          </div>
+          )}
 
-          {/* Action Section */}
-          {status === "manual" && (
-            <div className="space-y-4 pt-2">
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium mb-2">
-                  <Check className="h-4 w-4" />
-                  Approval Message
-                </label>
-                <Textarea
-                  value={approveMessage}
-                  onChange={(e) => setApproveMessage(e.target.value)}
-                  className="min-h-[80px] bg-background resize-none text-sm"
-                  placeholder="Enter approval message..."
-                  disabled={!isActionable}
-                />
-                {isActionable && (
-                  <Button
-                    onClick={() => handleSend("approve")}
-                    disabled={isSending !== null || !approveMessage.trim()}
-                    className="mt-2 w-full bg-foreground text-background hover:bg-foreground/90"
-                  >
-                    {isSending === "approve" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="mr-2 h-4 w-4" />
-                    )}
-                    Send Approval
-                  </Button>
-                )}
+          {/* AI Draft Reply */}
+          {isActionable && (collectedData.workType || lead.workType) && (
+            <div className="rounded-md border border-border bg-muted/20 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  AI Draft Reply
+                </div>
+                <button
+                  onClick={() => {
+                    const workType = collectedData.workType || lead.workType || "your project"
+                    const location = collectedData.location || lead.location
+                    const budget = collectedData.budget
+                    const draft = `Hi ${lead.name.split(" ")[0]}, thank you for reaching out about ${workType}${location ? ` in ${location}` : ""}. ${budget ? `Your budget of ${budget} fits well with our services. ` : ""}We'd love to discuss your project further. When would be a good time to connect?`
+                    setApproveMessage(draft)
+                  }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline"
+                >
+                  Use as approval message
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed italic">
+                {`Hi ${lead.name.split(" ")[0]}, thank you for reaching out about ${collectedData.workType || lead.workType}${collectedData.location || lead.location ? ` in ${collectedData.location || lead.location}` : ""}. ${collectedData.budget ? `Your budget of ${collectedData.budget} fits well with our services. ` : ""}We'd love to discuss your project further. When would be a good time to connect?`}
+              </p>
+            </div>
+          )}
+
+          {/* Action Section — for pending and manual */}
+          {isActionable && (
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Respond to Lead
               </div>
 
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium mb-2">
-                  <XCircle className="h-4 w-4" />
-                  Decline Message
-                </label>
+                <Textarea
+                  value={approveMessage}
+                  onChange={(e) => setApproveMessage(e.target.value)}
+                  className="min-h-[72px] bg-background resize-none text-sm mb-2"
+                  placeholder="Approval message..."
+                />
+                <Button
+                  onClick={() => handleSend("approve")}
+                  disabled={isSending !== null || !approveMessage.trim()}
+                  className="w-full bg-foreground text-background hover:bg-foreground/90"
+                  size="sm"
+                >
+                  {isSending === "approve" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                  )}
+                  Send Approval
+                </Button>
+              </div>
+
+              <div>
                 <Textarea
                   value={declineMessage}
                   onChange={(e) => setDeclineMessage(e.target.value)}
-                  className="min-h-[80px] bg-background resize-none text-sm"
-                  placeholder="Enter decline message..."
-                  disabled={!isActionable}
+                  className="min-h-[72px] bg-background resize-none text-sm mb-2"
+                  placeholder="Decline message..."
                 />
-                {isActionable && (
-                  <button
-                    onClick={() => handleSend("decline")}
-                    disabled={isSending !== null || !declineMessage.trim()}
-                    className="mt-2 w-full px-4 py-2 bg-muted text-foreground text-sm font-medium rounded-md hover:bg-muted/80 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-                  >
-                    {isSending === "decline" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <XCircle className="mr-2 h-4 w-4" />
-                    )}
-                    Send Decline
-                  </button>
-                )}
+                <button
+                  onClick={() => handleSend("decline")}
+                  disabled={isSending !== null || !declineMessage.trim()}
+                  className="w-full px-4 py-2 bg-muted text-foreground text-sm font-medium rounded-md hover:bg-muted/80 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSending === "decline" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="mr-2 h-4 w-4" />
+                  )}
+                  Send Decline
+                </button>
               </div>
             </div>
           )}
 
-          {/* Delete Button (for approved or declined leads) */}
+          {/* Delete Button */}
           {(status === "approved" || status === "declined") && onDelete && (
             <Button
               variant="outline"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
             >
               {isDeleting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

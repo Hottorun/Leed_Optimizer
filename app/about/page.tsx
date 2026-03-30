@@ -3,114 +3,120 @@
 import Link from 'next/link'
 import { ArrowLeft, Users, Target, Zap, Shield, Globe, Mail, Phone, MapPin } from 'lucide-react'
 
+const S = {
+  page: { minHeight: '100vh', backgroundColor: '#fafafa', color: '#111111', fontFamily: 'inherit' } as const,
+  header: { position: 'sticky' as const, top: 0, zIndex: 20, borderBottom: '1px solid #e5e5e5', backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)' },
+  nav: { maxWidth: '72rem', margin: '0 auto', padding: '0 1.5rem', height: '3.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  logo: { display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' },
+  logoIcon: { display: 'flex', height: '1.75rem', width: '1.75rem', alignItems: 'center', justifyContent: 'center', borderRadius: '0.375rem', backgroundColor: '#111111' },
+  logoText: { fontSize: '0.875rem', fontWeight: 600, letterSpacing: '-0.01em', color: '#111111' },
+  backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: '#737373', textDecoration: 'none' },
+  main: { paddingBottom: '5rem', paddingLeft: '1.5rem', paddingRight: '1.5rem' },
+  container: { maxWidth: '56rem', margin: '0 auto', paddingTop: '4rem' },
+  card: { padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e5e5e5', backgroundColor: '#ffffff' },
+  iconBox: { width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem', backgroundColor: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' },
+  footer: { borderTop: '1px solid #e5e5e5', backgroundColor: '#ffffff', padding: '2rem 1.5rem' },
+}
+
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-[#030303] text-white">
-      <header className="fixed z-20 w-full px-2">
-        <nav className="mx-auto mt-2 max-w-6xl px-6 py-3 lg:py-4 border border-white/10 rounded-2xl bg-black/50 backdrop-blur-md">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-600">
-              <Zap className="size-5 text-white" />
+    <div style={S.page}>
+      <header style={S.header}>
+        <div style={S.nav}>
+          <Link href="/" style={S.logo}>
+            <div style={S.logoIcon}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff' }}>A</span>
             </div>
-            <span className="text-lg font-semibold text-white">Aclea</span>
+            <span style={S.logoText}>aclea</span>
           </Link>
-        </nav>
-      </header>
-
-      <main className="pt-32 pb-20 px-6">
-        <div className="max-w-4xl mx-auto">
-          <Link href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors">
-            <ArrowLeft className="size-4" />
+          <Link href="/" style={S.backLink}>
+            <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
             Back to Home
           </Link>
+        </div>
+      </header>
 
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">About Aclea</h1>
-          <p className="text-xl text-white/60 mb-16 max-w-2xl">
+      <main style={S.main}>
+        <div style={S.container}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '1rem', letterSpacing: '-0.03em' }}>About Aclea</h1>
+          <p style={{ fontSize: '1.25rem', color: '#737373', marginBottom: '4rem', maxWidth: '36rem' }}>
             We're on a mission to help businesses qualify leads faster and smarter with AI-powered automation.
           </p>
 
-          <div className="grid md:grid-cols-2 gap-12 mb-20">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '3rem', marginBottom: '5rem' }}>
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Our Mission</h2>
-              <p className="text-white/60 leading-relaxed">
-                At Aclea, we believe that every lead deserves attention, but not every lead deserves your time. 
-                Our AI-powered platform automatically qualifies leads based on 50+ criteria, helping you focus 
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Our Mission</h2>
+              <p style={{ color: '#737373', lineHeight: '1.6' }}>
+                At Aclea, we believe that every lead deserves attention, but not every lead deserves your time.
+                Our AI-powered platform automatically qualifies leads based on 50+ criteria, helping you focus
                 on the opportunities that actually matter.
               </p>
             </div>
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Our Story</h2>
-              <p className="text-white/60 leading-relaxed">
-                Founded in 2024, Aclea was born from a simple frustration: spending hours evaluating leads 
-                that never converted. We built a solution that uses advanced AI to do the heavy lifting, 
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>Our Story</h2>
+              <p style={{ color: '#737373', lineHeight: '1.6' }}>
+                Founded in 2024, Aclea was born from a simple frustration: spending hours evaluating leads
+                that never converted. We built a solution that uses advanced AI to do the heavy lifting,
                 so our customers can focus on closing deals.
               </p>
             </div>
           </div>
 
-          <div className="mb-20">
-            <h2 className="text-2xl font-semibold mb-8 text-center">Why Choose Aclea</h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="p-6 rounded-2xl border border-white/10 bg-white/5">
-                <Zap className="size-8 text-emerald-400 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Lightning Fast</h3>
-                <p className="text-white/60 text-sm">Qualify leads in seconds, not hours</p>
-              </div>
-              <div className="p-6 rounded-2xl border border-white/10 bg-white/5">
-                <Shield className="size-8 text-emerald-400 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">GDPR Compliant</h3>
-                <p className="text-white/60 text-sm">Your data is safe with us</p>
-              </div>
-              <div className="p-6 rounded-2xl border border-white/10 bg-white/5">
-                <Globe className="size-8 text-emerald-400 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">German Servers</h3>
-                <p className="text-white/60 text-sm">Hosted in Germany for maximum security</p>
-              </div>
+          <div style={{ marginBottom: '5rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '2rem', textAlign: 'center' }}>Why Choose Aclea</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+              {[
+                { icon: Zap, title: 'Lightning Fast', desc: 'Qualify leads in seconds, not hours' },
+                { icon: Shield, title: 'GDPR Compliant', desc: 'Your data is safe with us' },
+                { icon: Globe, title: 'German Servers', desc: 'Hosted in Germany for maximum security' },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} style={S.card}>
+                  <div style={S.iconBox}><Icon style={{ width: '1.25rem', height: '1.25rem', color: '#111111' }} /></div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{title}</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#737373' }}>{desc}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="mb-20">
-            <h2 className="text-2xl font-semibold mb-8 text-center">Our Values</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="flex gap-4">
-                <Users className="size-6 text-emerald-400 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold mb-2">Customer First</h3>
-                  <p className="text-white/60 text-sm">We build products that solve real problems for our customers.</p>
+          <div style={{ marginBottom: '5rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '2rem', textAlign: 'center' }}>Our Values</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
+              {[
+                { icon: Users, title: 'Customer First', desc: 'We build products that solve real problems for our customers.' },
+                { icon: Target, title: 'Continuous Innovation', desc: "We're always improving our AI to deliver better results." },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} style={{ ...S.card, display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                  <div style={{ ...S.iconBox, marginBottom: 0, flexShrink: 0 }}><Icon style={{ width: '1rem', height: '1rem', color: '#111111' }} /></div>
+                  <div>
+                    <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{title}</h3>
+                    <p style={{ fontSize: '0.875rem', color: '#737373' }}>{desc}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-4">
-                <Target className="size-6 text-emerald-400 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold mb-2">Continuous Innovation</h3>
-                  <p className="text-white/60 text-sm">We're always improving our AI to deliver better results.</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          <div className="mb-20">
-            <h2 className="text-2xl font-semibold mb-8 text-center">Get in Touch</h2>
-            <div className="flex flex-col md:flex-row gap-8 justify-center">
-              <div className="flex items-center gap-3 text-white/60">
-                <Mail className="size-5 text-emerald-400" />
-                <span>contact@aclea.de</span>
-              </div>
-              <div className="flex items-center gap-3 text-white/60">
-                <Phone className="size-5 text-emerald-400" />
-                <span>+49 (0) 30 123 456 78</span>
-              </div>
-              <div className="flex items-center gap-3 text-white/60">
-                <MapPin className="size-5 text-emerald-400" />
-                <span>Berlin, Deutschland</span>
-              </div>
+          <div style={{ marginBottom: '5rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '2rem', textAlign: 'center' }}>Get in Touch</h2>
+            <div style={{ ...S.card, display: 'flex', flexWrap: 'wrap' as const, gap: '2rem', justifyContent: 'center', alignItems: 'center' }}>
+              {[
+                { icon: Mail, text: 'contact@aclea.de' },
+                { icon: Phone, text: '+49 (0) 30 123 456 78' },
+                { icon: MapPin, text: 'Berlin, Deutschland' },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#737373' }}>
+                  <Icon style={{ width: '1.25rem', height: '1.25rem', color: '#111111' }} />
+                  <span style={{ fontSize: '0.875rem' }}>{text}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </main>
 
-      <footer className="border-t border-white/10 bg-black/50 py-8 px-6">
-        <div className="max-w-4xl mx-auto text-center text-white/40 text-sm">
+      <footer style={S.footer}>
+        <div style={{ maxWidth: '56rem', margin: '0 auto', textAlign: 'center', color: '#a3a3a3', fontSize: '0.875rem' }}>
           &copy; {new Date().getFullYear()} Aclea GmbH. All rights reserved.
         </div>
       </footer>

@@ -134,42 +134,64 @@ export function Analytics({ leads }: AnalyticsProps) {
             ))}
           </div>
         </div>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={growthData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartColor} stopOpacity={0.1} />
-                  <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="0" stroke={gridColor} />
-              <XAxis dataKey="date" stroke={chartColorMuted} fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke={chartColorMuted} fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: isDark ? "#18181B" : "#FFFFFF",
-                  border: `1px solid ${isDark ? "#27272A" : "#E5E5E5"}`,
-                  borderRadius: "6px",
-                  fontSize: "12px",
-                  color: isDark ? "#FAFAFA" : "#0A0A0A",
-                  boxShadow: "none"
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="leads"
-                stroke={chartColor}
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorLeads)"
-                name="Total Leads"
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        {leads.length === 0 ? (
+          <div className="h-64 flex flex-col items-center justify-center text-muted-foreground gap-2">
+            <div className="text-3xl font-semibold text-border">—</div>
+            <p className="text-sm">No leads yet. Data will appear here once leads come in.</p>
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={growthData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={chartColor} stopOpacity={0.1} />
+                    <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorApproved" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="0" stroke={gridColor} />
+                <XAxis dataKey="date" stroke={chartColorMuted} fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke={chartColorMuted} fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: isDark ? "#18181B" : "#FFFFFF",
+                    border: `1px solid ${isDark ? "#27272A" : "#E5E5E5"}`,
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    color: isDark ? "#FAFAFA" : "#0A0A0A",
+                    boxShadow: "none"
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="leads"
+                  stroke={chartColor}
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorLeads)"
+                  name="Total Leads"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="approved"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorApproved)"
+                  name="Approved"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* Bottom Grid */}
@@ -210,10 +232,10 @@ export function Analytics({ leads }: AnalyticsProps) {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    <Cell fill={chartColor} />
-                    <Cell fill={chartColorMuted} />
-                    <Cell fill="#A3A3A3" />
-                    <Cell fill="#52525B" />
+                    <Cell fill="#22c55e" />
+                    <Cell fill="#f59e0b" />
+                    <Cell fill="#8b5cf6" />
+                    <Cell fill="#ef4444" />
                   </Pie>
                   <Tooltip
                     contentStyle={{
@@ -229,19 +251,19 @@ export function Analytics({ leads }: AnalyticsProps) {
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-sm bg-foreground" />
+                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#22c55e" }} />
                 <span className="text-xs text-muted-foreground">Approved ({approved.length})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-sm bg-muted-foreground" />
+                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#f59e0b" }} />
                 <span className="text-xs text-muted-foreground">Pending ({pending.length})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#A3A3A3" }} />
+                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#8b5cf6" }} />
                 <span className="text-xs text-muted-foreground">Manual ({manual.length})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#52525B" }} />
+                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#ef4444" }} />
                 <span className="text-xs text-muted-foreground">Declined ({declined.length})</span>
               </div>
             </div>
@@ -270,6 +292,44 @@ export function Analytics({ leads }: AnalyticsProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Conversion Funnel */}
+      <div className="rounded-lg border border-border bg-card p-5">
+        <h2 className="text-sm font-medium mb-1">Conversion Funnel</h2>
+        <p className="text-xs text-muted-foreground mb-5">How leads move through your pipeline</p>
+        {leads.length === 0 ? (
+          <div className="flex items-center justify-center h-24 text-sm text-muted-foreground">
+            No data yet — leads will appear here once they come in.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {[
+              { label: "Received", count: leads.length, color: "#6366f1", pct: 100 },
+              { label: "AI Qualified", count: leads.filter(l => (l.session?.rating ?? l.rating ?? 0) > 0).length, color: "#8b5cf6", pct: leads.length > 0 ? Math.round((leads.filter(l => (l.session?.rating ?? l.rating ?? 0) > 0).length / leads.length) * 100) : 0 },
+              { label: "Approved", count: approved.length, color: "#22c55e", pct: leads.length > 0 ? Math.round((approved.length / leads.length) * 100) : 0 },
+              { label: "Declined", count: declined.length, color: "#ef4444", pct: leads.length > 0 ? Math.round((declined.length / leads.length) * 100) : 0 },
+            ].map((stage) => (
+              <div key={stage.label} className="flex items-center gap-4">
+                <div className="w-24 shrink-0 text-xs text-muted-foreground text-right">{stage.label}</div>
+                <div className="flex-1 relative h-8 bg-muted/40 rounded-md overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-md transition-all duration-500"
+                    style={{ width: `${Math.max(stage.pct, 2)}%`, backgroundColor: stage.color, opacity: 0.85 }}
+                  />
+                  <div className="absolute inset-0 flex items-center px-3 gap-2">
+                    <span className="text-xs font-semibold" style={{ color: stage.pct > 20 ? "white" : stage.color }}>
+                      {stage.count}
+                    </span>
+                    <span className="text-xs" style={{ color: stage.pct > 20 ? "rgba(255,255,255,0.7)" : "var(--muted-foreground)" }}>
+                      {stage.pct}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
