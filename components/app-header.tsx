@@ -49,6 +49,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
     if (pathname === "/dashboard") return "Dashboard"
     if (pathname === "/leads") return "Leads"
     if (pathname === "/analytics") return "Analytics"
+    if (pathname === "/calendar") return "Calendar"
     if (pathname?.startsWith("/settings")) return "Settings"
     return "Dashboard"
   }
@@ -63,6 +64,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
     { name: "Dashboard", path: "/dashboard" },
     { name: "Leads", path: "/leads" },
     { name: "Analytics", path: "/analytics" },
+    { name: "Calendar", path: "/calendar" },
   ]
 
   const getTimeAgo = (dateString: string) => {
