@@ -1,23 +1,24 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
+import useSWR from "swr"
 import { cn } from "@/lib/utils"
 import { format, startOfWeek, addDays, isSameDay } from "date-fns"
 import {
   ChevronLeft,
   ChevronRight,
-  Globe,
   Sparkles,
   Clock,
   Phone,
   Mail,
   CalendarIcon,
-  X,
-  Check,
   Zap,
   Settings2,
+  Trash2,
+  User as UserIcon,
 } from "lucide-react"
 import type { Lead } from "@/lib/types"
+import type { User } from "@/lib/use-user"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,54 +28,48 @@ interface Appointment {
   leadName: string
   leadEmail: string
   type: "call" | "follow-up" | "consultation"
-  day: number   // index 0–6 (Mon–Sun)
-  hour: number  // 8–20
+  day: number
+  hour: number
   duration: number
 }
 
 interface DayHours {
   enabled: boolean
-  start: number  // 0–23
-  end: number    // 0–23
+  start: number
+  end: number
 }
 
-type WorkingHours = Record<number, DayHours> // key 0=Mon … 6=Sun
+type WorkingHours = Record<number, DayHours>
+
+interface ScheduleMember {
+  id: string
+  name: string
+  role: string
+  isMe: boolean
+}
 
 interface CalendarViewProps {
   leads: Lead[]
+  currentUser: User
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const HOURS = Array.from({ length: 13 }, (_, i) => i + 8) // 8 AM – 8 PM
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i) // 0–23
+const SLOT_HEIGHT  = 64
+const START_HOUR   = 8
+const HOURS        = Array.from({ length: 13 }, (_, i) => i + START_HOUR)
+const DAYS         = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i)
 
 const DEFAULT_WORKING_HOURS: WorkingHours = {
-  0: { enabled: true,  start: 8, end: 17 }, // Mon
-  1: { enabled: true,  start: 8, end: 17 }, // Tue
-  2: { enabled: true,  start: 8, end: 17 }, // Wed
-  3: { enabled: true,  start: 8, end: 17 }, // Thu
-  4: { enabled: true,  start: 8, end: 17 }, // Fri
-  5: { enabled: false, start: 9, end: 13 }, // Sat
-  6: { enabled: false, start: 9, end: 13 }, // Sun
+  0: { enabled: true,  start: 8, end: 17 },
+  1: { enabled: true,  start: 8, end: 17 },
+  2: { enabled: true,  start: 8, end: 17 },
+  3: { enabled: true,  start: 8, end: 17 },
+  4: { enabled: true,  start: 8, end: 17 },
+  5: { enabled: false, start: 9, end: 13 },
+  6: { enabled: false, start: 9, end: 13 },
 }
-
-const TIMEZONES = [
-  { label: "UTC",                value: "UTC" },
-  { label: "Eastern Time (ET)", value: "America/New_York" },
-  { label: "Central Time (CT)", value: "America/Chicago" },
-  { label: "Mountain Time (MT)",value: "America/Denver" },
-  { label: "Pacific Time (PT)", value: "America/Los_Angeles" },
-  { label: "London (GMT/BST)",  value: "Europe/London" },
-  { label: "Paris / Berlin (CET)", value: "Europe/Paris" },
-  { label: "Dubai (GST)",       value: "Asia/Dubai" },
-  { label: "Mumbai (IST)",      value: "Asia/Kolkata" },
-  { label: "Singapore / HKG",  value: "Asia/Singapore" },
-  { label: "Tokyo (JST)",       value: "Asia/Tokyo" },
-  { label: "Sydney (AEST)",     value: "Australia/Sydney" },
-  { label: "São Paulo (BRT)",   value: "America/Sao_Paulo" },
-]
 
 const TYPE_COLORS: Record<Appointment["type"], string> = {
   call:         "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400",
@@ -94,6 +89,14 @@ const TYPE_LABELS: Record<Appointment["type"], string> = {
   consultation: "Consult",
 }
 
+const ROLE_BADGE: Record<string, string> = {
+  owner:  "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  admin:  "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  member: "bg-muted text-muted-foreground",
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function formatHour(h: number) {
   if (h === 0)  return "12 AM"
   if (h === 12) return "12 PM"
@@ -105,27 +108,107 @@ function generateId() {
   return Math.random().toString(36).slice(2, 10)
 }
 
+function getLocalTimezone() {
+  try {
+    const tz     = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const offset = -new Date().getTimezoneOffset()
+    const sign   = offset >= 0 ? "+" : "-"
+    const h      = Math.floor(Math.abs(offset) / 60).toString().padStart(2, "0")
+    const m      = (Math.abs(offset) % 60).toString().padStart(2, "0")
+    return `${tz.replace(/_/g, " ")} (UTC${sign}${h}:${m})`
+  } catch {
+    return "UTC"
+  }
+}
+
+function storageKey(memberId: string) {
+  return `aclea_calendar_${memberId}`
+}
+
+function loadMemberData(memberId: string): { appointments: Appointment[]; workingHours: WorkingHours } {
+  if (typeof window === "undefined") return { appointments: [], workingHours: DEFAULT_WORKING_HOURS }
+  try {
+    const raw = localStorage.getItem(storageKey(memberId))
+    if (!raw) return { appointments: [], workingHours: DEFAULT_WORKING_HOURS }
+    const parsed = JSON.parse(raw)
+    return {
+      appointments: Array.isArray(parsed.appointments) ? parsed.appointments : [],
+      workingHours: parsed.workingHours ?? DEFAULT_WORKING_HOURS,
+    }
+  } catch {
+    return { appointments: [], workingHours: DEFAULT_WORKING_HOURS }
+  }
+}
+
+function saveMemberData(memberId: string, appointments: Appointment[], workingHours: WorkingHours) {
+  if (typeof window === "undefined") return
+  localStorage.setItem(storageKey(memberId), JSON.stringify({ appointments, workingHours }))
+}
+
+const fetcher = (url: string) => fetch(url).then(r => r.json())
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function CalendarView({ leads }: CalendarViewProps) {
-  const [weekOffset, setWeekOffset]           = useState(0)
-  const [timezone, setTimezone]               = useState("UTC")
-  const [appointments, setAppointments]       = useState<Appointment[]>([])
-  const [workingHours, setWorkingHours]       = useState<WorkingHours>(DEFAULT_WORKING_HOURS)
-  const [showHoursPanel, setShowHoursPanel]   = useState(false)
-  const [dragging, setDragging]               = useState<string | null>(null)
-  const [dragOver, setDragOver]               = useState<{ day: number; hour: number } | null>(null)
-  const [toast, setToast]                     = useState<string | null>(null)
-  const [showTzDropdown, setShowTzDropdown]   = useState(false)
-  const tzRef = useRef<HTMLDivElement>(null)
+export function CalendarView({ leads, currentUser }: CalendarViewProps) {
+  const [selectedMemberId, setSelectedMemberId] = useState(currentUser.id)
+  const [weekOffset, setWeekOffset]             = useState(0)
+  const [appointments, setAppointments]         = useState<Appointment[]>([])
+  const [workingHours, setWorkingHours]         = useState<WorkingHours>(DEFAULT_WORKING_HOURS)
+  const [showHoursPanel, setShowHoursPanel]     = useState(false)
+  const [dragging, setDragging]                 = useState<string | null>(null)
+  const [dragOver, setDragOver]                 = useState<{ day: number; hour: number } | null>(null)
+  const [toast, setToast]                       = useState<string | null>(null)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [now, setNow]                           = useState(new Date())
 
+  const scrollRef   = useRef<HTMLDivElement>(null)
+  const resizingRef = useRef<{ id: string; startY: number; originalDuration: number } | null>(null)
+  const localTz     = getLocalTimezone()
+
+  // Team members
+  const { data: membersData } = useSWR("/api/teams/members", fetcher, {
+    onError: () => {},
+    revalidateOnFocus: false,
+  })
+  const rawMembers: { id: string; name: string; role: string }[] = membersData?.members ?? []
+
+  const scheduleMembers: ScheduleMember[] = [
+    { id: currentUser.id, name: currentUser.name, role: currentUser.teamRole ?? "member", isMe: true },
+    ...rawMembers
+      .filter(m => m.id !== currentUser.id)
+      .map(m => ({ id: m.id, name: m.name, role: m.role, isMe: false })),
+  ]
+
+  const selectedMember = scheduleMembers.find(m => m.id === selectedMemberId) ?? scheduleMembers[0]
+
+  // ── Load member data when selection changes ──
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (tzRef.current && !tzRef.current.contains(e.target as Node))
-        setShowTzDropdown(false)
-    }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
+    const data = loadMemberData(selectedMemberId)
+    setAppointments(data.appointments)
+    setWorkingHours(data.workingHours)
+  }, [selectedMemberId])
+
+  // ── Persist with debounce — the 300ms delay ensures cleanup cancels stale saves ──
+  useEffect(() => {
+    if (!selectedMemberId) return
+    const timer = setTimeout(() => {
+      saveMemberData(selectedMemberId, appointments, workingHours)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [appointments, workingHours, selectedMemberId])
+
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Auto-scroll to current time on mount
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const top = ((now.getHours() + now.getMinutes() / 60) - START_HOUR) * SLOT_HEIGHT
+    if (top > 0) scrollRef.current.scrollTop = Math.max(0, top - 150)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -134,11 +217,29 @@ export function CalendarView({ leads }: CalendarViewProps) {
     return () => clearTimeout(t)
   }, [toast])
 
-  const weekStart = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), weekOffset * 7)
-  const weekDays  = DAYS.map((_, i) => addDays(weekStart, i))
-  const today     = new Date()
+  // Resize mouse handlers
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const r = resizingRef.current
+      if (!r) return
+      const deltaSlots = Math.round((e.clientY - r.startY) / SLOT_HEIGHT)
+      const newDuration = Math.max(1, r.originalDuration + deltaSlots)
+      setAppointments(prev => prev.map(a => a.id === r.id ? { ...a, duration: newDuration } : a))
+    }
+    const onUp = () => { resizingRef.current = null }
+    document.addEventListener("mousemove", onMove)
+    document.addEventListener("mouseup", onUp)
+    return () => {
+      document.removeEventListener("mousemove", onMove)
+      document.removeEventListener("mouseup", onUp)
+    }
+  }, [])
 
-  // ── Helpers ──
+  const weekStart      = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), weekOffset * 7)
+  const weekDays       = DAYS.map((_, i) => addDays(weekStart, i))
+  const today          = new Date()
+  const currentTimeTop = ((now.getHours() + now.getMinutes() / 60) - START_HOUR) * SLOT_HEIGHT
+
   const isWithinWorkingHours = useCallback((day: number, hour: number): boolean => {
     const dh = workingHours[day]
     if (!dh || !dh.enabled) return false
@@ -164,11 +265,7 @@ export function CalendarView({ leads }: CalendarViewProps) {
     setAppointments(prev => prev.map(a => a.id === id ? { ...a, day, hour } : a))
     setDragging(null)
     setDragOver(null)
-    if (!isWithinWorkingHours(day, hour)) {
-      setToast("⚠️ Moved outside working hours")
-    } else {
-      setToast("Appointment rescheduled")
-    }
+    setToast(isWithinWorkingHours(day, hour) ? "Appointment rescheduled" : "⚠️ Moved outside working hours")
   }, [isWithinWorkingHours])
 
   const handleDragEnd = useCallback(() => {
@@ -176,7 +273,11 @@ export function CalendarView({ leads }: CalendarViewProps) {
     setDragOver(null)
   }, [])
 
-  // ── Auto-schedule — respects working hours ──
+  const handleResizeStart = useCallback((id: string, startY: number, originalDuration: number) => {
+    resizingRef.current = { id, startY, originalDuration }
+  }, [])
+
+  // ── Auto-schedule ──
   const autoSchedule = useCallback(() => {
     const eligible = leads
       .filter(l => {
@@ -185,25 +286,16 @@ export function CalendarView({ leads }: CalendarViewProps) {
       })
       .slice(0, 20)
 
-    if (eligible.length === 0) {
-      setToast("No approved leads to schedule")
-      return
-    }
+    if (eligible.length === 0) { setToast("No approved leads to schedule"); return }
 
-    // Build ordered list of available slots from working hours
     const slots: { day: number; hour: number }[] = []
     for (let day = 0; day < 7; day++) {
       const dh = workingHours[day]
       if (!dh?.enabled) continue
-      for (let hour = dh.start; hour < dh.end; hour += 1) {
-        slots.push({ day, hour })
-      }
+      for (let hour = dh.start; hour < dh.end; hour++) slots.push({ day, hour })
     }
 
-    if (slots.length === 0) {
-      setToast("No working hours configured — enable at least one day")
-      return
-    }
+    if (slots.length === 0) { setToast("No working hours configured — enable at least one day"); return }
 
     const types: Appointment["type"][] = ["call", "follow-up", "consultation"]
     const newAppts: Appointment[] = []
@@ -212,11 +304,8 @@ export function CalendarView({ leads }: CalendarViewProps) {
     for (const lead of eligible) {
       if (appointments.some(a => a.leadId === lead.id)) continue
       if (slotIdx >= slots.length) break
-
-      // Space out slots: every other slot (i.e. 1-hour gaps between bookings)
       const slot = slots[slotIdx]
       slotIdx += 2
-
       newAppts.push({
         id: generateId(),
         leadId: lead.id,
@@ -229,23 +318,12 @@ export function CalendarView({ leads }: CalendarViewProps) {
       })
     }
 
-    if (newAppts.length === 0) {
-      setToast("All leads already scheduled")
-      return
-    }
-
+    if (newAppts.length === 0) { setToast("All leads already scheduled"); return }
     setAppointments(prev => [...prev, ...newAppts])
-    setToast(`Scheduled ${newAppts.length} appointment${newAppts.length > 1 ? "s" : ""} within your working hours`)
+    setToast(`Scheduled ${newAppts.length} appointment${newAppts.length > 1 ? "s" : ""}`)
   }, [leads, appointments, workingHours])
 
-  const removeAppointment = useCallback((id: string) => {
-    setAppointments(prev => prev.filter(a => a.id !== id))
-  }, [])
-
-  const getAppointmentsAt = (day: number, hour: number) =>
-    appointments.filter(a => a.day === day && a.hour === hour)
-
-  // ── Working hours update helpers ──
+  // ── Working hours helpers ──
   const toggleDay = (day: number) =>
     setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], enabled: !prev[day].enabled } }))
 
@@ -261,7 +339,11 @@ export function CalendarView({ leads }: CalendarViewProps) {
       [day]: { ...prev[day], end, start: Math.min(prev[day].start, end - 1) },
     }))
 
-  const selectedTz = TIMEZONES.find(t => t.value === timezone) ?? TIMEZONES[0]
+  const clearSchedule = () => {
+    setAppointments([])
+    setShowClearConfirm(false)
+    setToast(`${selectedMember.name}'s schedule cleared`)
+  }
 
   return (
     <div className="p-6 space-y-5 max-w-7xl mx-auto">
@@ -272,9 +354,7 @@ export function CalendarView({ leads }: CalendarViewProps) {
           <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Schedule and manage lead appointments</p>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Working hours toggle */}
           <button
             onClick={() => setShowHoursPanel(v => !v)}
             className={cn(
@@ -288,45 +368,24 @@ export function CalendarView({ leads }: CalendarViewProps) {
             Working Hours
           </button>
 
-          {/* Timezone picker */}
-          <div className="relative" ref={tzRef}>
+          {/* Clear schedule */}
+          {!showClearConfirm ? (
             <button
-              onClick={() => setShowTzDropdown(v => !v)}
-              className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card text-sm hover:bg-muted transition-colors"
+              onClick={() => setShowClearConfirm(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card text-sm hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive transition-colors"
+              title="Clear schedule"
             >
-              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-medium">{selectedTz.label}</span>
-              <ChevronLeft className="h-3 w-3 text-muted-foreground rotate-[-90deg]" />
+              <Trash2 className="h-3.5 w-3.5" />
+              Clear
             </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-destructive/40 bg-destructive/5 text-sm">
+              <span className="text-destructive text-xs font-medium">Clear {selectedMember.isMe ? "your" : `${selectedMember.name}'s`} schedule?</span>
+              <button onClick={clearSchedule} className="px-2 py-0.5 rounded bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors">Yes</button>
+              <button onClick={() => setShowClearConfirm(false)} className="px-2 py-0.5 rounded border border-border text-xs hover:bg-muted transition-colors">No</button>
+            </div>
+          )}
 
-            {showTzDropdown && (
-              <div className="absolute right-0 mt-1 w-64 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
-                <div className="max-h-64 overflow-y-auto py-1">
-                  {TIMEZONES.map(tz => (
-                    <button
-                      key={tz.value}
-                      onClick={() => {
-                        setTimezone(tz.value)
-                        setShowTzDropdown(false)
-                        setToast(`Timezone set to ${tz.label}`)
-                      }}
-                      className={cn(
-                        "w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2",
-                        tz.value === timezone
-                          ? "bg-muted text-foreground font-medium"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )}
-                    >
-                      {tz.value === timezone && <Check className="h-3 w-3 shrink-0" />}
-                      <span className={tz.value === timezone ? "" : "pl-[18px]"}>{tz.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Auto-schedule */}
           <button
             onClick={autoSchedule}
             className="flex items-center gap-2 px-3 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:bg-foreground/90 transition-colors"
@@ -337,12 +396,80 @@ export function CalendarView({ leads }: CalendarViewProps) {
         </div>
       </div>
 
+      {/* ── Team member selector (only shown when team has multiple members) ── */}
+      {scheduleMembers.length > 1 && (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-border flex items-center gap-2">
+            <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">Team Schedules</span>
+          </div>
+          <div className="flex gap-2 p-3 overflow-x-auto">
+            {scheduleMembers.map(member => (
+              <button
+                key={member.id}
+                onClick={() => setSelectedMemberId(member.id)}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all shrink-0",
+                  selectedMemberId === member.id
+                    ? "bg-foreground text-background border-foreground"
+                    : "border-border bg-card hover:bg-muted"
+                )}
+              >
+                {/* Avatar */}
+                <div className={cn(
+                  "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0",
+                  selectedMemberId === member.id
+                    ? "bg-background/20 text-background"
+                    : "bg-muted text-foreground"
+                )}>
+                  {member.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+
+                <div className="min-w-0">
+                  <div className="text-xs font-medium truncate max-w-[100px]">
+                    {member.isMe ? "You" : member.name}
+                  </div>
+                  <div className={cn(
+                    "text-[10px] capitalize px-1 rounded mt-0.5 inline-block",
+                    selectedMemberId === member.id
+                      ? "text-background/60"
+                      : ROLE_BADGE[member.role] ?? ROLE_BADGE.member
+                  )}>
+                    {member.role}
+                  </div>
+                </div>
+
+                {/* Appointment count badge */}
+                {(() => {
+                  const count = loadMemberData(member.id).appointments.length
+                  return count > 0 ? (
+                    <span className={cn(
+                      "text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0",
+                      selectedMemberId === member.id
+                        ? "bg-background/20 text-background"
+                        : "bg-muted text-muted-foreground"
+                    )}>
+                      {count}
+                    </span>
+                  ) : null
+                })()}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Working Hours Panel ── */}
       {showHoursPanel && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center gap-2">
             <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-            <h2 className="text-sm font-medium">Working Hours</h2>
+            <h2 className="text-sm font-medium">
+              Working Hours
+              {!selectedMember.isMe && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">— {selectedMember.name}</span>
+              )}
+            </h2>
             <span className="ml-auto text-xs text-muted-foreground">
               AI will only schedule leads within these windows
             </span>
@@ -358,7 +485,6 @@ export function CalendarView({ leads }: CalendarViewProps) {
                     !dh.enabled && "opacity-50"
                   )}
                 >
-                  {/* Toggle */}
                   <button
                     onClick={() => toggleDay(i)}
                     className={cn(
@@ -366,18 +492,12 @@ export function CalendarView({ leads }: CalendarViewProps) {
                       dh.enabled ? "bg-foreground" : "bg-muted-foreground/30"
                     )}
                   >
-                    <span
-                      className={cn(
-                        "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-                        dh.enabled ? "translate-x-4" : "translate-x-0"
-                      )}
-                    />
+                    <span className={cn(
+                      "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                      dh.enabled ? "translate-x-4" : "translate-x-0"
+                    )} />
                   </button>
-
-                  {/* Day label */}
                   <span className="w-8 text-sm font-medium">{day}</span>
-
-                  {/* Time range */}
                   {dh.enabled ? (
                     <div className="flex items-center gap-2 flex-1">
                       <select
@@ -389,9 +509,7 @@ export function CalendarView({ leads }: CalendarViewProps) {
                           <option key={h} value={h}>{formatHour(h)}</option>
                         ))}
                       </select>
-
                       <span className="text-xs text-muted-foreground">to</span>
-
                       <select
                         value={dh.end}
                         onChange={e => updateEnd(i, Number(e.target.value))}
@@ -401,7 +519,6 @@ export function CalendarView({ leads }: CalendarViewProps) {
                           <option key={h} value={h}>{formatHour(h)}</option>
                         ))}
                       </select>
-
                       <span className="text-xs text-muted-foreground ml-1">
                         ({dh.end - dh.start}h window)
                       </span>
@@ -419,9 +536,12 @@ export function CalendarView({ leads }: CalendarViewProps) {
       {/* ── Info bar ── */}
       <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/60 border border-border text-xs text-muted-foreground">
         <Zap className="h-3 w-3 shrink-0" />
-        AI schedules leads only within your working hours in{" "}
-        <span className="font-medium text-foreground">{selectedTz.label}</span>.
-        Drag any card to reschedule. Dimmed slots are outside your availability.
+        {!selectedMember.isMe
+          ? <><span className="font-medium text-foreground">{selectedMember.name}&apos;s</span> schedule</>
+          : "Your schedule"
+        }
+        {" "}· Timezone: <span className="font-medium text-foreground">{localTz}</span>
+        {" "}· Drag cards to reschedule · Drag bottom edge to extend
       </div>
 
       {/* ── Week navigation ── */}
@@ -432,14 +552,12 @@ export function CalendarView({ leads }: CalendarViewProps) {
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-
         <div className="text-sm font-medium">
           {format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d, yyyy")}
           {weekOffset === 0 && (
             <span className="ml-2 text-xs text-muted-foreground">(This week)</span>
           )}
         </div>
-
         <button
           onClick={() => setWeekOffset(o => o + 1)}
           className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -454,15 +572,15 @@ export function CalendarView({ leads }: CalendarViewProps) {
         <div className="grid border-b border-border" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
           <div className="h-12 border-r border-border" />
           {weekDays.map((date, i) => {
-            const isToday = isSameDay(date, today)
+            const isToday    = isSameDay(date, today)
             const dayEnabled = workingHours[i]?.enabled
             return (
               <div
                 key={i}
                 className={cn(
                   "h-12 flex flex-col items-center justify-center border-r border-border last:border-r-0 text-xs",
-                  isToday ? "bg-foreground/5" : "",
-                  !dayEnabled ? "opacity-40" : ""
+                  isToday && "bg-foreground/5",
+                  !dayEnabled && "opacity-40"
                 )}
               >
                 <span className="text-muted-foreground font-medium uppercase tracking-wide text-[10px]">
@@ -479,72 +597,98 @@ export function CalendarView({ leads }: CalendarViewProps) {
           })}
         </div>
 
-        {/* Time slots */}
-        <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 340px)", minHeight: "400px" }}>
-          {HOURS.map(hour => (
-            <div
-              key={hour}
-              className="grid border-b border-border last:border-b-0"
-              style={{ gridTemplateColumns: "56px repeat(7, 1fr)", minHeight: "64px" }}
-            >
-              {/* Hour label */}
-              <div className="flex items-start justify-end pr-2 pt-1.5 border-r border-border text-[10px] text-muted-foreground font-medium shrink-0">
-                {formatHour(hour)}
-              </div>
+        {/* Scrollable body */}
+        <div
+          ref={scrollRef}
+          className="overflow-y-auto"
+          style={{ maxHeight: "calc(100vh - 340px)", minHeight: "400px" }}
+        >
+          <div className="grid" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
 
-              {/* Day cells */}
-              {DAYS.map((_, dayIdx) => {
-                const appts         = getAppointmentsAt(dayIdx, hour)
-                const isOver        = dragOver?.day === dayIdx && dragOver?.hour === hour
-                const isToday       = isSameDay(weekDays[dayIdx], today)
-                const inWorkHours   = isWithinWorkingHours(dayIdx, hour)
-                const dayEnabled    = workingHours[dayIdx]?.enabled
+            {/* Time labels */}
+            <div className="border-r border-border">
+              {HOURS.map(hour => (
+                <div
+                  key={hour}
+                  className="flex items-start justify-end pr-2 pt-1.5 border-b border-border last:border-b-0 text-[10px] text-muted-foreground font-medium"
+                  style={{ height: SLOT_HEIGHT }}
+                >
+                  {formatHour(hour)}
+                </div>
+              ))}
+            </div>
 
-                return (
-                  <div
-                    key={dayIdx}
-                    onDragOver={(e) => handleDragOver(e, dayIdx, hour)}
-                    onDrop={(e) => handleDrop(e, dayIdx, hour)}
-                    className={cn(
-                      "border-r border-border last:border-r-0 p-1 relative transition-colors",
-                      // Today column subtle tint
-                      isToday && inWorkHours ? "bg-foreground/[0.02]" : "",
-                      // Out-of-hours: dimmed stripe pattern
-                      !inWorkHours && dayEnabled
-                        ? "bg-muted/30"
-                        : "",
-                      // Day-off: stronger dim
-                      !dayEnabled
-                        ? "bg-muted/20 opacity-50"
-                        : "",
-                      // Drag-over highlight
-                      isOver && inWorkHours ? "bg-muted/80 ring-1 ring-inset ring-foreground/20" : "",
-                      isOver && !inWorkHours ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500/30" : "",
-                    )}
-                  >
-                    {/* Out-of-hours label (first slot only) */}
-                    {!inWorkHours && dayEnabled && appts.length === 0 && hour === workingHours[dayIdx]?.end && (
-                      <span className="absolute inset-0 flex items-center justify-center text-[9px] text-muted-foreground/40 pointer-events-none select-none">
-                        off
-                      </span>
-                    )}
+            {/* Day columns */}
+            {DAYS.map((_, dayIdx) => {
+              const isToday    = isSameDay(weekDays[dayIdx], today)
+              const dayEnabled = workingHours[dayIdx]?.enabled
+              const dayAppts   = appointments.filter(a => a.day === dayIdx)
 
-                    {appts.map(appt => (
+              return (
+                <div
+                  key={dayIdx}
+                  className={cn(
+                    "relative border-r border-border last:border-r-0",
+                    !dayEnabled && "opacity-50"
+                  )}
+                  style={{ height: HOURS.length * SLOT_HEIGHT }}
+                >
+                  {/* Hour background cells / drop targets */}
+                  {HOURS.map((hour, hourIdx) => {
+                    const inWorkHours = isWithinWorkingHours(dayIdx, hour)
+                    const isOver      = dragOver?.day === dayIdx && dragOver?.hour === hour
+                    return (
+                      <div
+                        key={hour}
+                        onDragOver={e => handleDragOver(e, dayIdx, hour)}
+                        onDrop={e => handleDrop(e, dayIdx, hour)}
+                        className={cn(
+                          "absolute left-0 right-0 border-b border-border transition-colors",
+                          isToday && inWorkHours && "bg-foreground/[0.02]",
+                          !inWorkHours && dayEnabled && "bg-muted/30",
+                          !dayEnabled && "bg-muted/20",
+                          isOver && inWorkHours && "bg-muted/80 ring-1 ring-inset ring-foreground/20",
+                          isOver && !inWorkHours && "bg-amber-500/10 ring-1 ring-inset ring-amber-500/30",
+                        )}
+                        style={{ top: hourIdx * SLOT_HEIGHT, height: SLOT_HEIGHT }}
+                      />
+                    )
+                  })}
+
+                  {/* Appointments */}
+                  {dayAppts.map(appt => {
+                    const hourIdx = HOURS.indexOf(appt.hour)
+                    if (hourIdx === -1) return null
+                    return (
                       <AppointmentCard
                         key={appt.id}
                         appointment={appt}
                         isDragging={dragging === appt.id}
-                        isOutsideHours={!inWorkHours}
+                        isOutsideHours={!isWithinWorkingHours(dayIdx, appt.hour)}
+                        top={hourIdx * SLOT_HEIGHT + 2}
+                        height={appt.duration * SLOT_HEIGHT - 4}
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
-                        onRemove={removeAppointment}
+                        onResizeStart={handleResizeStart}
                       />
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+                    )
+                  })}
+
+                  {/* Current time indicator */}
+                  {isToday && weekOffset === 0 && currentTimeTop >= 0 && currentTimeTop < HOURS.length * SLOT_HEIGHT && (
+                    <div
+                      className="absolute left-0 right-0 z-20 pointer-events-none"
+                      style={{ top: currentTimeTop }}
+                    >
+                      <div className="relative h-px bg-red-500">
+                        <div className="absolute -left-1 -top-[3px] w-2 h-2 rounded-full bg-red-500" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -561,11 +705,11 @@ export function CalendarView({ leads }: CalendarViewProps) {
           Outside hours
         </div>
         <span className="ml-auto">
-          {appointments.length} appointment{appointments.length !== 1 ? "s" : ""} this week
+          {appointments.length} appointment{appointments.length !== 1 ? "s" : ""}
         </span>
       </div>
 
-      {/* ── Unscheduled leads ── */}
+      {/* ── Unscheduled Leads ── */}
       <UnscheduledLeads
         leads={leads}
         appointments={appointments}
@@ -588,7 +732,6 @@ export function CalendarView({ leads }: CalendarViewProps) {
       {/* ── Toast ── */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 bg-foreground text-background text-sm font-medium rounded-full shadow-lg">
-          <Check className="h-3.5 w-3.5" />
           {toast}
         </div>
       )}
@@ -602,53 +745,63 @@ function AppointmentCard({
   appointment: a,
   isDragging,
   isOutsideHours,
+  top,
+  height,
   onDragStart,
   onDragEnd,
-  onRemove,
+  onResizeStart,
 }: {
   appointment: Appointment
   isDragging: boolean
   isOutsideHours: boolean
+  top: number
+  height: number
   onDragStart: (e: React.DragEvent, id: string) => void
   onDragEnd: () => void
-  onRemove: (id: string) => void
+  onResizeStart: (id: string, startY: number, originalDuration: number) => void
 }) {
-  const [hovered, setHovered] = useState(false)
-
   return (
     <div
       draggable
       onDragStart={e => onDragStart(e, a.id)}
       onDragEnd={onDragEnd}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       className={cn(
-        "relative rounded-md border px-2 py-1.5 text-xs mb-1 last:mb-0 transition-all select-none",
+        "absolute left-1 right-1 rounded-md border px-2 py-1.5 text-xs transition-all select-none z-10 flex flex-col overflow-hidden",
         TYPE_COLORS[a.type],
         isDragging ? "opacity-40 scale-95" : "cursor-grab active:cursor-grabbing hover:shadow-sm",
-        isOutsideHours ? "opacity-60 border-dashed" : ""
+        isOutsideHours && "opacity-60 border-dashed"
       )}
+      style={{ top, height }}
     >
       {isOutsideHours && (
         <div className="absolute -top-1.5 right-1 text-[9px] text-amber-500 font-medium">outside hours</div>
       )}
-      <div className="flex items-center justify-between gap-1">
-        <div className="flex items-center gap-1 min-w-0">
-          <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", TYPE_DOT[a.type])} />
-          <span className="font-medium truncate">{a.leadName}</span>
-        </div>
-        {hovered && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove(a.id) }}
-            className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        )}
+      <div className="flex items-center gap-1 min-w-0">
+        <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", TYPE_DOT[a.type])} />
+        <span className="font-medium truncate">{a.leadName}</span>
       </div>
-      <div className="flex items-center gap-1 mt-0.5 opacity-70">
-        {a.leadEmail ? <Mail className="h-2.5 w-2.5 shrink-0" /> : <Phone className="h-2.5 w-2.5 shrink-0" />}
-        <span className="text-[10px] truncate">{TYPE_LABELS[a.type]}</span>
+      {height > 44 && (
+        <div className="flex items-center gap-1 mt-0.5 opacity-70">
+          {a.leadEmail
+            ? <Mail className="h-2.5 w-2.5 shrink-0" />
+            : <Phone className="h-2.5 w-2.5 shrink-0" />}
+          <span className="text-[10px] truncate">{TYPE_LABELS[a.type]}</span>
+        </div>
+      )}
+      {a.duration > 1 && height > 56 && (
+        <div className="mt-auto text-[9px] opacity-50 tabular-nums">{a.duration}h</div>
+      )}
+      {/* Resize handle */}
+      <div
+        draggable={false}
+        className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize flex items-center justify-center"
+        onMouseDown={e => {
+          e.stopPropagation()
+          e.preventDefault()
+          onResizeStart(a.id, e.clientY, a.duration)
+        }}
+      >
+        <div className="w-6 h-0.5 rounded-full bg-current opacity-20" />
       </div>
     </div>
   )
@@ -669,19 +822,16 @@ function UnscheduledLeads({
 }) {
   const scheduledIds = new Set(appointments.map(a => a.leadId))
 
-  // Find the first available working-hours slot
   const firstAvailableSlot = (): { day: number; hour: number } => {
     for (let day = 0; day < 7; day++) {
       const dh = workingHours[day]
       if (!dh?.enabled) continue
-      const takenHours = new Set(
-        appointments.filter(a => a.day === day).map(a => a.hour)
-      )
+      const takenHours = new Set(appointments.filter(a => a.day === day).map(a => a.hour))
       for (let hour = dh.start; hour < dh.end; hour++) {
         if (!takenHours.has(hour)) return { day, hour }
       }
     }
-    return { day: 0, hour: 9 } // fallback
+    return { day: 0, hour: 9 }
   }
 
   const unscheduled = leads

@@ -38,7 +38,7 @@ export default function CalendarPage() {
         user={{ name: user.name, email: user.email }}
         leads={leads}
       />
-      <CalendarView leads={leads} />
+      <CalendarView leads={leads} currentUser={user} />
     </ThemeBackground>
   )
 }
