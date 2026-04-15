@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import type { Lead } from "@/lib/types"
 import { useEffect } from "react"
+import { toast } from "sonner"
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
@@ -136,9 +137,12 @@ export default function DashboardPage() {
         const updatedLead = await response.json()
         setSelectedLead(updatedLead)
         mutate()
+      } else {
+        const data = await response.json().catch(() => ({}))
+        toast.error(data.error || "Failed to update lead")
       }
-    } catch (error) {
-      console.error("Failed to update lead:", error)
+    } catch {
+      toast.error("Failed to update lead")
     }
   }
 
@@ -154,9 +158,13 @@ export default function DashboardPage() {
         const result = await response.json()
         setSelectedLead(result.lead)
         mutate()
+      } else {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to send message")
       }
-    } catch (error) {
-      console.error("Failed to send message:", error)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to send message"
+      throw new Error(msg)
     }
   }
 
@@ -187,6 +195,9 @@ export default function DashboardPage() {
               if (response.ok) {
                 setSelectedLead(null)
                 mutate()
+              } else {
+                const data = await response.json().catch(() => ({}))
+                throw new Error(data.error || "Failed to delete lead")
               }
             }}
           />

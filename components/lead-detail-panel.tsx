@@ -16,12 +16,12 @@ import {
   Clock,
   Pencil,
   Trash2,
-  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import type { Lead, LeadSource, LeadStatus, CollectedData } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface LeadDetailPanelProps {
   lead: Lead
@@ -75,7 +75,6 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
   const [isSending, setIsSending] = useState<"approve" | "decline" | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [editForm, setEditForm] = useState({
     name: lead.name,
     workType: (getCollectedDataFirst(lead.session?.collectedData).workType as string) || lead.workType || "",
@@ -95,14 +94,13 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
     const message = action === "approve" ? approveMessage : declineMessage
     try {
       await onSendMessage(action, message)
+      toast.success(`Message ${action === "approve" ? "approval" : "decline"} sent`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to send message"
+      toast.error(msg)
     } finally {
       setIsSending(null)
     }
-  }
-
-  const handleStatusChange = async (newStatus: LeadStatus) => {
-    setShowStatusMenu(false)
-    await onUpdate({ status: newStatus } as Partial<Lead>)
   }
 
   const handleDelete = async () => {
@@ -111,6 +109,8 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
     try {
       await onDelete(lead.id)
       onClose()
+    } catch {
+      toast.error("Failed to delete lead")
     } finally {
       setIsDeleting(false)
     }
@@ -125,23 +125,30 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
       budget: editForm.budget,
       timeline: editForm.timeline,
     }
-    
-    await onUpdate({
-      name: editForm.name,
-      workType: editForm.workType,
-      location: editForm.location,
-      conversationSummary: editForm.conversationSummary,
-    } as Partial<Lead>)
-    
-    if (lead.session?.id) {
-      await fetch(`/api/leads/${lead.id}/session`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ collectedData: updatedCollectedData }),
-      })
+
+    try {
+      await onUpdate({
+        name: editForm.name,
+        workType: editForm.workType,
+        location: editForm.location,
+        conversationSummary: editForm.conversationSummary,
+      } as Partial<Lead>)
+
+      if (lead.session?.id) {
+        const res = await fetch(`/api/leads/${lead.id}/session`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ collectedData: updatedCollectedData }),
+        })
+        if (!res.ok) throw new Error("Failed to save session data")
+      }
+
+      toast.success("Lead updated")
+      setIsEditing(false)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save changes"
+      toast.error(msg)
     }
-    
-    setIsEditing(false)
   }
 
   const isActionable = status === "pending" || status === "manual"
@@ -188,34 +195,14 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
                 <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                   {sourceLabel}
                 </span>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowStatusMenu(!showStatusMenu)}
-                    className={cn(
-                      "text-xs px-2 py-0.5 rounded-full capitalize font-medium cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1",
-                      currentStatusOption?.className
-                    )}
-                  >
-                    {status}
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                  {showStatusMenu && (
-                    <div className="absolute top-full left-0 mt-1 bg-card rounded-md border border-border shadow-lg z-10 py-1 min-w-[100px]">
-                      {STATUS_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => handleStatusChange(option.value)}
-                          className={cn(
-                            "w-full text-left px-3 py-1.5 text-xs capitalize hover:bg-muted transition-colors",
-                            status === option.value && "font-medium"
-                          )}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
+                <span
+                  className={cn(
+                    "text-xs px-2 py-0.5 rounded-full capitalize font-medium",
+                    currentStatusOption?.className
                   )}
-                </div>
+                >
+                  {status}
+                </span>
               </div>
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
                 <Briefcase className="h-3.5 w-3.5" />

@@ -11,6 +11,7 @@ import type { Lead } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { useUser } from "@/lib/use-user"
+import { toast } from "sonner"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -41,7 +42,7 @@ function LeadsContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedActionLeads, setSelectedActionLeads] = useState<Set<string>>(new Set())
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
-  const [toast, setToast] = useState<{ message: string; id: string } | null>(null)
+  const [newLeadNotif, setNewLeadNotif] = useState<{ message: string; id: string } | null>(null)
   const prevLeadIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -84,13 +85,13 @@ function LeadsContent() {
       const newLeads = leads.filter(l => !prevLeadIdsRef.current.has(l.id))
       if (newLeads.length > 0) {
         const lead = newLeads[0]
-        setToast({
+        setNewLeadNotif({
           message: newLeads.length === 1
             ? `New lead: ${lead.name}`
             : `${newLeads.length} new leads received`,
           id: lead.id,
         })
-        setTimeout(() => setToast(null), 5000)
+        setTimeout(() => setNewLeadNotif(null), 5000)
       }
     }
     prevLeadIdsRef.current = currentIds
@@ -114,27 +115,35 @@ function LeadsContent() {
 
   const handleApproveLead = async (leadId: string) => {
     try {
-      await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "approved" }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || "Failed to approve lead")
+      }
       mutate()
-    } catch (error) {
-      console.error("Failed to approve lead:", error)
+    } catch {
+      toast.error("Failed to approve lead")
     }
   }
 
   const handleDeclineLead = async (leadId: string) => {
     try {
-      await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "declined" }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || "Failed to decline lead")
+      }
       mutate()
-    } catch (error) {
-      console.error("Failed to decline lead:", error)
+    } catch {
+      toast.error("Failed to decline lead")
     }
   }
 
@@ -153,32 +162,40 @@ function LeadsContent() {
     setSelectedActionLeads(new Set())
     mutate()
     if (failed > 0) {
-      setToast({ message: `${failed} lead${failed > 1 ? "s" : ""} failed to approve`, id: "" })
-      setTimeout(() => setToast(null), 5000)
+      toast.error(`${failed} lead${failed > 1 ? "s" : ""} failed to approve`)
     }
   }
 
   const handleDeleteLead = async (leadId: string) => {
     try {
-      await fetch(`/api/leads/${leadId}`, { method: "DELETE" })
+      const res = await fetch(`/api/leads/${leadId}`, { method: "DELETE" })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to delete lead")
+      }
       if (selectedLead?.id === leadId) setSelectedLead(null)
       mutate()
-    } catch (error) {
-      console.error("Failed to delete lead:", error)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to delete lead"
+      throw new Error(msg)
     }
   }
 
   const handleDeleteAllDeclined = async () => {
     const ids = declinedLeads.map(l => l.id)
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       ids.map(id => fetch(`/api/leads/${id}`, { method: "DELETE" }))
     )
+    const failed = results.filter(r => r.status === "rejected").length
     setSelectedActionLeads(prev => {
       const next = new Set(prev)
       ids.forEach(id => next.delete(id))
       return next
     })
     mutate()
+    if (failed > 0) {
+      toast.error(`${failed} lead${failed > 1 ? "s" : ""} failed to delete`)
+    }
   }
 
   const handleBatchDecline = async () => {
@@ -196,8 +213,7 @@ function LeadsContent() {
     setSelectedActionLeads(new Set())
     mutate()
     if (failed > 0) {
-      setToast({ message: `${failed} lead${failed > 1 ? "s" : ""} failed to decline`, id: "" })
-      setTimeout(() => setToast(null), 5000)
+      toast.error(`${failed} lead${failed > 1 ? "s" : ""} failed to decline`)
     }
   }
 
@@ -744,20 +760,20 @@ function LeadsContent() {
       <AppHeader onRefresh={mutate} isRefreshing={false} user={user ? { name: user.name, email: user.email } : undefined} leads={leads || []} />
 
       {/* New Lead Toast */}
-      {toast && (
+      {newLeadNotif && (
         <div
           className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card shadow-xl cursor-pointer max-w-xs"
           onClick={() => {
-            setToast(null)
-            router.push(`/leads?id=${toast.id}`)
+            setNewLeadNotif(null)
+            router.push(`/leads?id=${newLeadNotif.id}`)
           }}
         >
           <Zap className="h-4 w-4 text-[var(--status-approved)] shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{toast.message}</p>
+            <p className="text-sm font-medium truncate">{newLeadNotif.message}</p>
             <p className="text-xs text-muted-foreground">Click to view</p>
           </div>
-          <button onClick={(e) => { e.stopPropagation(); setToast(null) }} className="text-muted-foreground hover:text-foreground">
+          <button onClick={(e) => { e.stopPropagation(); setNewLeadNotif(null) }} className="text-muted-foreground hover:text-foreground">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -965,6 +981,9 @@ function LeadsContent() {
               const updatedLead = await response.json()
               setSelectedLead(updatedLead)
               mutate()
+            } else {
+              const data = await response.json().catch(() => ({}))
+              throw new Error(data.error || "Failed to update lead")
             }
           }}
           onSendMessage={async (action, message) => {
@@ -977,6 +996,9 @@ function LeadsContent() {
               const result = await response.json()
               setSelectedLead(result.lead)
               mutate()
+            } else {
+              const data = await response.json().catch(() => ({}))
+              throw new Error(data.error || "Failed to send message")
             }
           }}
           onDelete={async (leadId) => {
@@ -986,6 +1008,9 @@ function LeadsContent() {
             if (response.ok) {
               setSelectedLead(null)
               mutate()
+            } else {
+              const data = await response.json().catch(() => ({}))
+              throw new Error(data.error || "Failed to delete lead")
             }
           }}
         />

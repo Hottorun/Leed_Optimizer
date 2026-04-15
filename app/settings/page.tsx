@@ -10,6 +10,7 @@ import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 
 interface TeamMember {
   id: string
@@ -24,6 +25,7 @@ export default function Settings() {
   const { user, loading: userLoading } = useUser()
   const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [isDark, setIsDark] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null)
@@ -46,6 +48,7 @@ export default function Settings() {
 
   useEffect(() => {
     setMounted(true)
+    setIsDark(document.documentElement.classList.contains("dark"))
   }, [])
 
   useEffect(() => {
@@ -89,7 +92,8 @@ export default function Settings() {
   }, [showTeamDialog, isAdminOrOwner])
 
   const toggleDarkMode = async () => {
-    const newMode = resolvedTheme === "dark" ? "light" : "dark"
+    const newMode = isDark ? "light" : "dark"
+    setIsDark(newMode === "dark")
 
     // Direct DOM update — immediate and reliable regardless of next-themes timing
     document.documentElement.classList.toggle("dark", newMode === "dark")
@@ -99,7 +103,7 @@ export default function Settings() {
     // Sync next-themes state
     setTheme(newMode)
 
-    showToast(newMode === "dark" ? "Dark mode enabled" : "Light mode enabled", "success")
+    showToast(!isDark ? "Dark mode enabled" : "Light mode enabled", "success")
 
     setIsSaving(true)
     try {
@@ -414,22 +418,12 @@ export default function Settings() {
                   <Moon className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Dark Mode</span>
                 </div>
-                <button
-                  onClick={toggleDarkMode}
+                <Switch
+                  checked={mounted && isDark}
+                  onCheckedChange={toggleDarkMode}
                   disabled={isSaving || !mounted}
-                  className={cn(
-                    "relative w-11 h-6 rounded-full transition-colors duration-200",
-                    mounted && resolvedTheme === "dark" ? "bg-foreground" : "bg-border",
-                    isSaving && "opacity-50"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "absolute top-1 w-4 h-4 rounded-full shadow-sm transition-transform duration-200",
-                      mounted && resolvedTheme === "dark" ? "bg-card translate-x-6" : "bg-card translate-x-1"
-                    )}
-                  />
-                </button>
+                  className="[--thumb-size:22px] sm:[--thumb-size:22px]"
+                />
               </div>
             </div>
 
@@ -442,18 +436,11 @@ export default function Settings() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Auto-delete after</span>
-                  <button
-                    onClick={() => setAutoDeleteEnabled(v => !v)}
-                    className={cn(
-                      "relative w-11 h-6 rounded-full transition-colors duration-200",
-                      autoDeleteEnabled ? "bg-foreground" : "bg-border"
-                    )}
-                  >
-                    <span className={cn(
-                      "absolute top-1 w-4 h-4 rounded-full shadow-sm transition-transform duration-200 bg-card",
-                      autoDeleteEnabled ? "translate-x-6" : "translate-x-1"
-                    )} />
-                  </button>
+                  <Switch
+                    checked={autoDeleteEnabled}
+                    onCheckedChange={setAutoDeleteEnabled}
+                    className="[--thumb-size:22px] sm:[--thumb-size:22px]"
+                  />
                 </div>
                 {autoDeleteEnabled && (
                   <div className="flex items-center gap-2">

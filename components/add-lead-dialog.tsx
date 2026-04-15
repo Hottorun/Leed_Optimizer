@@ -22,6 +22,31 @@ import {
 import { Loader2, Star, AlertTriangle } from "lucide-react"
 import type { ContactPlatform, LeadStatus, Lead } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validateEmail(value: string): string | null {
+  if (!value.trim()) return "Email is required"
+  if (value !== value.trim()) return "Email must not have leading or trailing spaces"
+  if (!EMAIL_REGEX.test(value)) return "Enter a valid email address"
+  return null
+}
+
+function validatePhone(value: string): string | null {
+  if (!value.trim()) return "Phone is required"
+  if (/^\s|\s$/.test(value)) return "Phone must not have leading or trailing spaces"
+  const digits = value.replace(/\D/g, "")
+  if (digits.length < 7) return "Phone number is too short (min 7 digits)"
+  if (digits.length > 15) return "Phone number is too long (max 15 digits)"
+  return null
+}
+
+function validateRequired(label: string, value: string): string | null {
+  if (!value.trim()) return `${label} is required`
+  if (/^\s|\s$/.test(value)) return `${label} must not have leading or trailing spaces`
+  return null
+}
 
 interface AddLeadDialogProps {
   open: boolean
@@ -48,6 +73,8 @@ interface ExistingLead {
   createdAt: string
 }
 
+type TouchedFields = Partial<Record<string, boolean>>
+
 export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [existingLeads, setExistingLeads] = useState<Lead[]>([])
@@ -63,6 +90,21 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
   const [ratingReason, setRatingReason] = useState("")
   const [contactPlatform, setContactPlatform] = useState<ContactPlatform>("whatsapp")
   const [status, setStatus] = useState<LeadStatus>("pending")
+  const [touched, setTouched] = useState<TouchedFields>({})
+
+  const touch = (field: string) => setTouched((t) => ({ ...t, [field]: true }))
+
+  const errors = {
+    name: validateRequired("Name", name),
+    phone: validatePhone(phone),
+    email: validateEmail(email),
+    location: validateRequired("Location", location),
+    workType: validateRequired("Work type", workType),
+    conversationSummary: validateRequired("Conversation summary", conversationSummary),
+    approveMessage: validateRequired("Approval message", approveMessage),
+    declineMessage: validateRequired("Decline message", declineMessage),
+    ratingReason: validateRequired("Rating reason", ratingReason),
+  }
 
   useEffect(() => {
     if (open) {
@@ -90,34 +132,46 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
     setRatingReason("")
     setContactPlatform("whatsapp")
     setStatus("pending")
+    setTouched({})
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Mark all fields touched to show all errors on submit
+    setTouched({
+      name: true, phone: true, email: true, location: true,
+      workType: true, conversationSummary: true, approveMessage: true,
+      declineMessage: true, ratingReason: true,
+    })
+    if (Object.values(errors).some(Boolean)) return
     setIsSubmitting(true)
     try {
       await onAddLead({
-        name,
-        phone,
-        email,
-        location,
-        workType,
-        conversationSummary,
-        approveMessage,
-        declineMessage,
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        location: location.trim(),
+        workType: workType.trim(),
+        conversationSummary: conversationSummary.trim(),
+        approveMessage: approveMessage.trim(),
+        declineMessage: declineMessage.trim(),
         rating,
-        ratingReason,
+        ratingReason: ratingReason.trim(),
         contactPlatform,
         status,
       })
+      toast.success("Lead added successfully")
       resetForm()
       onOpenChange(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to add lead"
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const isValid = name && phone && email && location && workType && conversationSummary && approveMessage && declineMessage && ratingReason
+  const isValid = !Object.values(errors).some(Boolean)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -138,8 +192,12 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                required
+                onBlur={() => touch("name")}
+                className={cn(touched.name && errors.name && "border-destructive focus-visible:ring-destructive")}
               />
+              {touched.name && errors.name && (
+                <p className="text-xs text-destructive">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone *</Label>
@@ -148,15 +206,19 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
                 placeholder="+1 (555) 123-4567"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                required
+                onBlur={() => touch("phone")}
+                className={cn(touched.phone && errors.phone && "border-destructive focus-visible:ring-destructive")}
               />
-              {existingLead && (
+              {touched.phone && errors.phone && (
+                <p className="text-xs text-destructive">{errors.phone}</p>
+              )}
+              {existingLead && !errors.phone && (
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 mt-2">
                   <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                   <div className="text-sm">
                     <p className="font-medium text-amber-500">Existing Lead Found</p>
                     <p className="text-muted-foreground">
-                      This phone number belongs to <span className="font-medium">{existingLead.name}</span>. 
+                      This phone number belongs to <span className="font-medium">{existingLead.name}</span>.
                       This will be lead #{(existingLead.leadCount ?? 0) + 1} from this customer.
                     </p>
                   </div>
@@ -170,12 +232,16 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
               <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
-                type="email"
+                type="text"
                 placeholder="john@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
+                onBlur={() => touch("email")}
+                className={cn(touched.email && errors.email && "border-destructive focus-visible:ring-destructive")}
               />
+              {touched.email && errors.email && (
+                <p className="text-xs text-destructive">{errors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="location">Location *</Label>
@@ -184,8 +250,12 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
                 placeholder="Los Angeles, CA"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                required
+                onBlur={() => touch("location")}
+                className={cn(touched.location && errors.location && "border-destructive focus-visible:ring-destructive")}
               />
+              {touched.location && errors.location && (
+                <p className="text-xs text-destructive">{errors.location}</p>
+              )}
             </div>
           </div>
 
@@ -197,8 +267,12 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
                 placeholder="Kitchen Renovation"
                 value={workType}
                 onChange={(e) => setWorkType(e.target.value)}
-                required
+                onBlur={() => touch("workType")}
+                className={cn(touched.workType && errors.workType && "border-destructive focus-visible:ring-destructive")}
               />
+              {touched.workType && errors.workType && (
+                <p className="text-xs text-destructive">{errors.workType}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="contact-platform">Contact Platform</Label>
@@ -259,9 +333,12 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
               placeholder="Brief summary of the customer conversation..."
               value={conversationSummary}
               onChange={(e) => setConversationSummary(e.target.value)}
-              className="min-h-[80px]"
-              required
+              onBlur={() => touch("conversationSummary")}
+              className={cn("min-h-[80px]", touched.conversationSummary && errors.conversationSummary && "border-destructive focus-visible:ring-destructive")}
             />
+            {touched.conversationSummary && errors.conversationSummary && (
+              <p className="text-xs text-destructive">{errors.conversationSummary}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -271,8 +348,12 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
               placeholder="Why this rating?"
               value={ratingReason}
               onChange={(e) => setRatingReason(e.target.value)}
-              required
+              onBlur={() => touch("ratingReason")}
+              className={cn(touched.ratingReason && errors.ratingReason && "border-destructive focus-visible:ring-destructive")}
             />
+            {touched.ratingReason && errors.ratingReason && (
+              <p className="text-xs text-destructive">{errors.ratingReason}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -282,9 +363,12 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
               placeholder="Message to send if approved..."
               value={approveMessage}
               onChange={(e) => setApproveMessage(e.target.value)}
-              className="min-h-[80px]"
-              required
+              onBlur={() => touch("approveMessage")}
+              className={cn("min-h-[80px]", touched.approveMessage && errors.approveMessage && "border-destructive focus-visible:ring-destructive")}
             />
+            {touched.approveMessage && errors.approveMessage && (
+              <p className="text-xs text-destructive">{errors.approveMessage}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -294,9 +378,12 @@ export function AddLeadDialog({ open, onOpenChange, onAddLead }: AddLeadDialogPr
               placeholder="Message to send if declined..."
               value={declineMessage}
               onChange={(e) => setDeclineMessage(e.target.value)}
-              className="min-h-[80px]"
-              required
+              onBlur={() => touch("declineMessage")}
+              className={cn("min-h-[80px]", touched.declineMessage && errors.declineMessage && "border-destructive focus-visible:ring-destructive")}
             />
+            {touched.declineMessage && errors.declineMessage && (
+              <p className="text-xs text-destructive">{errors.declineMessage}</p>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
