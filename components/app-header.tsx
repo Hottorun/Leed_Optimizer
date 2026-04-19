@@ -70,6 +70,7 @@ export function AppHeader({ onRefresh, isRefreshing, user, leads = [] }: AppHead
   const navItems = [
     { name: "Dashboard", path: "/dashboard" },
     { name: "Leads", path: "/leads" },
+    { name: "Messages", path: "/messages" },
     { name: "Analytics", path: "/analytics" },
   ]
 
