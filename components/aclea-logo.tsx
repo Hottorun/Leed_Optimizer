@@ -55,7 +55,7 @@ export function AcleaLogo({
       <span
         style={{
           fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif",
-          fontWeight: 300,
+          fontWeight: 400,
           fontSize,
           letterSpacing: "-0.03em",
           lineHeight: 1,
