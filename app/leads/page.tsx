@@ -8,6 +8,7 @@ import { LeadDetailPanel } from "@/components/lead-detail-panel"
 import { ImportLeadModal } from "@/components/import-lead-modal"
 import { Search, Mail, Plus, ChevronRight, ChevronDown, ArrowUpDown, LayoutGrid, List, Clock, Star, X, Check, CheckCircle2, AlertCircle, Sparkles, Zap } from "lucide-react"
 import type { Lead } from "@/lib/types"
+import { getSafeString } from "@/lib/lead-utils"
 import { cn } from "@/lib/utils"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { useUser } from "@/lib/use-user"
@@ -106,7 +107,7 @@ function LeadsContent() {
   }
   const getLeadSource = (lead: Lead): string => {
     const collectedData = getCollectedDataFirst(lead.session?.collectedData)
-    if (collectedData?.source) return collectedData.source as string
+    if (typeof collectedData?.source === "string") return collectedData.source
     if (lead.phone) return "whatsapp"
     if (lead.email) return "email"
     return ""

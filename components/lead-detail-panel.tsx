@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import type { Lead, LeadSource, LeadStatus, CollectedData } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { getSafeString } from "@/lib/lead-utils"
 import { toast } from "sonner"
 
 interface LeadDetailPanelProps {
@@ -49,7 +50,8 @@ function getCollectedDataFirst(collectedData: CollectedData | CollectedData[] | 
 
 function getLeadSource(lead: Lead): LeadSource {
   const collectedData = getCollectedDataFirst(lead.session?.collectedData)
-  if (collectedData?.source) return collectedData.source as LeadSource
+  const source = getSafeString(collectedData?.source)
+  if (source === "whatsapp" || source === "email") return source
   if (lead.phone) return "whatsapp"
   return "email"
 }
@@ -77,11 +79,11 @@ export function LeadDetailPanel({ lead, onClose, onUpdate, onSendMessage, onDele
   const [isDeleting, setIsDeleting] = useState(false)
   const [editForm, setEditForm] = useState({
     name: lead.name,
-    workType: (getCollectedDataFirst(lead.session?.collectedData).workType as string) || lead.workType || "",
-    location: (getCollectedDataFirst(lead.session?.collectedData).location as string) || lead.location || "",
-    conversationSummary: lead.conversationSummary || (getCollectedDataFirst(lead.session?.collectedData).conversationSummary as string) || "",
-    budget: (getCollectedDataFirst(lead.session?.collectedData).budget as string) || "",
-    timeline: (getCollectedDataFirst(lead.session?.collectedData).timeline as string) || "",
+    workType: getSafeString(getCollectedDataFirst(lead.session?.collectedData).workType) || lead.workType || "",
+    location: getSafeString(getCollectedDataFirst(lead.session?.collectedData).location) || lead.location || "",
+    conversationSummary: lead.conversationSummary || getSafeString(getCollectedDataFirst(lead.session?.collectedData).conversationSummary) || "",
+    budget: getSafeString(getCollectedDataFirst(lead.session?.collectedData).budget) || "",
+    timeline: getSafeString(getCollectedDataFirst(lead.session?.collectedData).timeline) || "",
   })
 
   const status = lead.session?.status || lead.status

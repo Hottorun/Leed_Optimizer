@@ -1,5 +1,9 @@
 import type { Lead } from "@/lib/types"
 
+export function getSafeString(value: unknown): string {
+  return typeof value === "string" ? value : ""
+}
+
 export function getLeadStatus(lead: Lead): string {
   return lead.session?.status || lead.status || "pending"
 }
@@ -22,7 +26,7 @@ export function getCollectedDataFirst(
 
 export function getLeadSource(lead: Lead): string {
   const collectedData = getCollectedDataFirst(lead.session?.collectedData)
-  if (collectedData?.source) return collectedData.source as string
+  if (typeof collectedData?.source === "string") return collectedData.source
   if (lead.phone) return "whatsapp"
   if (lead.email) return "email"
   return ""
