@@ -2,178 +2,112 @@
 
 import Link from 'next/link'
 import { ArrowLeft, Zap, MessageSquare, Bell, Users, BarChart3, Shield, Check, Clock, Target, ArrowRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+
+const S = {
+  page: { minHeight: '100vh', backgroundColor: '#fafafa', color: '#111111' } as const,
+  header: { position: 'sticky' as const, top: 0, zIndex: 20, borderBottom: '1px solid #e5e5e5', backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(12px)' },
+  nav: { maxWidth: '72rem', margin: '0 auto', padding: '0 1.5rem', height: '3.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  logo: { display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' },
+  logoIcon: { display: 'flex', height: '1.75rem', width: '1.75rem', alignItems: 'center', justifyContent: 'center', borderRadius: '0.375rem', backgroundColor: '#111111' },
+  card: { padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e5e5e5', backgroundColor: '#ffffff' },
+  iconBox: { width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem', backgroundColor: '#f5f5f5', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' },
+  footer: { borderTop: '1px solid #e5e5e5', backgroundColor: '#ffffff', padding: '2rem 1.5rem' },
+  primaryBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', backgroundColor: '#111111', color: '#ffffff', borderRadius: '0.75rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none' } as const,
+}
 
 export default function SolutionPage() {
   const features = [
-    {
-      icon: Zap,
-      title: "AI-Powered Qualification",
-      description: "Our advanced AI analyzes incoming leads and scores them based on 50+ criteria including budget signals, purchase readiness, and industry fit.",
-      benefits: ["Instant lead scoring", "Priority ranking", "Conversion predictions"]
-    },
-    {
-      icon: MessageSquare,
-      title: "Unified Inbox",
-      description: "Receive leads from WhatsApp, Email, Web Forms, and more - all in one centralized dashboard.",
-      benefits: ["WhatsApp integration", "Email parsing", "Web form capture"]
-    },
-    {
-      icon: Bell,
-      title: "Real-time Notifications",
-      description: "Never miss a hot lead. Get instant notifications when high-quality leads come in.",
-      benefits: ["Instant alerts", "Customizable triggers", "Multi-channel delivery"]
-    },
-    {
-      icon: Users,
-      title: "Team Collaboration",
-      description: "Work together efficiently with your team. Assign leads, share notes, and track progress.",
-      benefits: ["Lead assignment", "Shared inbox", "Activity tracking"]
-    },
-    {
-      icon: BarChart3,
-      title: "Advanced Analytics",
-      description: "Get insights into your lead pipeline with comprehensive dashboards and reports.",
-      benefits: ["Conversion tracking", "Source analytics", "Performance metrics"]
-    },
-    {
-      icon: Shield,
-      title: "Enterprise Security",
-      description: "Your data is safe with us. GDPR compliant with German servers and end-to-end encryption.",
-      benefits: ["GDPR compliant", "German hosting", "Data encryption"]
-    }
+    { icon: Zap, title: 'AI-Powered Qualification', description: 'Our advanced AI analyzes incoming leads and scores them based on 50+ criteria including budget signals, purchase readiness, and industry fit.', benefits: ['Instant lead scoring', 'Priority ranking', 'Conversion predictions'] },
+    { icon: MessageSquare, title: 'Unified Inbox', description: 'Receive leads from WhatsApp, Email, Web Forms, and more - all in one centralized dashboard.', benefits: ['WhatsApp integration', 'Email parsing', 'Web form capture'] },
+    { icon: Bell, title: 'Real-time Notifications', description: 'Never miss a hot lead. Get instant notifications when high-quality leads come in.', benefits: ['Instant alerts', 'Customizable triggers', 'Multi-channel delivery'] },
+    { icon: Users, title: 'Team Collaboration', description: 'Work together efficiently with your team. Assign leads, share notes, and track progress.', benefits: ['Lead assignment', 'Shared inbox', 'Activity tracking'] },
+    { icon: BarChart3, title: 'Advanced Analytics', description: 'Get insights into your lead pipeline with comprehensive dashboards and reports.', benefits: ['Conversion tracking', 'Source analytics', 'Performance metrics'] },
+    { icon: Shield, title: 'Enterprise Security', description: 'Your data is safe with us. GDPR compliant with German servers and end-to-end encryption.', benefits: ['GDPR compliant', 'German hosting', 'Data encryption'] },
   ]
 
   const useCases = [
-    {
-      title: "For Real Estate",
-      description: "Qualify property inquiries instantly. Focus on buyers ready to make offers.",
-      icon: Target
-    },
-    {
-      title: "For Agencies",
-      description: "Handle client onboarding at scale. Let AI filter out time-wasters.",
-      icon: Users
-    },
-    {
-      title: "For SaaS",
-      description: "Identify trial users worth converting. Prioritize your sales efforts.",
-      icon: Zap
-    },
-    {
-      title: "For E-commerce",
-      description: "Score wholesale inquiries. Find B2B partners worth pursuing.",
-      icon: BarChart3
-    }
+    { title: 'For Real Estate', description: 'Qualify property inquiries instantly. Focus on buyers ready to make offers.', icon: Target },
+    { title: 'For Agencies', description: 'Handle client onboarding at scale. Let AI filter out time-wasters.', icon: Users },
+    { title: 'For SaaS', description: 'Identify trial users worth converting. Prioritize your sales efforts.', icon: Zap },
+    { title: 'For E-commerce', description: 'Score wholesale inquiries. Find B2B partners worth pursuing.', icon: BarChart3 },
   ]
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white">
-      <header className="fixed z-20 w-full px-2">
-        <nav className="mx-auto mt-2 max-w-6xl px-6 py-3 lg:py-4 border border-white/10 rounded-2xl bg-black/50 backdrop-blur-md">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-600">
-              <Zap className="size-5 text-white" />
+    <div style={S.page}>
+      <header style={S.header}>
+        <div style={S.nav}>
+          <Link href="/" style={S.logo}>
+            <div style={S.logoIcon}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff' }}>A</span>
             </div>
-            <span className="text-lg font-semibold text-white">Aclea</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, letterSpacing: '-0.01em', color: '#111111' }}>aclea</span>
           </Link>
-        </nav>
-      </header>
-
-      <main className="pt-32 pb-20 px-6">
-        <div className="max-w-6xl mx-auto">
-          <Link href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors">
-            <ArrowLeft className="size-4" />
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.875rem', color: '#737373', textDecoration: 'none' }}>
+            <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
             Back to Home
           </Link>
+        </div>
+      </header>
 
-          {/* Hero Section */}
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full border border-emerald-600/20 bg-emerald-600/10">
-              <Zap className="size-4 text-emerald-400" />
-              <span className="text-sm font-medium text-emerald-400">The AI Lead Solution</span>
+      <main style={{ paddingBottom: '5rem', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+        <div style={{ maxWidth: '72rem', margin: '0 auto', paddingTop: '4rem' }}>
+
+          {/* Hero */}
+          <div style={{ textAlign: 'center', maxWidth: '48rem', margin: '0 auto 5rem' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.75rem', marginBottom: '1.5rem', borderRadius: '9999px', border: '1px solid #e5e5e5', backgroundColor: '#ffffff', fontSize: '0.75rem', fontWeight: 500, color: '#737373' }}>
+              <Zap style={{ width: '0.875rem', height: '0.875rem' }} />
+              The AI Lead Solution
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Stop Qualifying Leads Manually.
-              <br />
-              <span className="text-emerald-400">Let AI Do It.</span>
+            <h1 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '1.5rem', letterSpacing: '-0.03em' }}>
+              Stop Qualifying Leads Manually.{' '}
+              <span style={{ color: '#a3a3a3' }}>Let AI Do It.</span>
             </h1>
-            <p className="text-xl text-white/60 mb-8 max-w-2xl mx-auto">
-              Aclea automatically scores and prioritizes your leads using advanced AI, 
-              so you can focus on closing deals instead of sorting through inquiries.
+            <p style={{ fontSize: '1.25rem', color: '#737373', marginBottom: '2rem', maxWidth: '36rem', margin: '0 auto 2rem' }}>
+              Aclea automatically scores and prioritizes your leads using advanced AI, so you can focus on closing deals instead of sorting through inquiries.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
-                <Link href="/contact">Get Started</Link>
-              </Button>
-            </div>
+            <Link href="/contact" style={S.primaryBtn}>
+              Get Started <ArrowRight style={{ width: '1rem', height: '1rem' }} />
+            </Link>
           </div>
 
           {/* Problem/Solution */}
-          <div className="grid md:grid-cols-2 gap-8 mb-20">
-            <div className="p-8 rounded-2xl border border-red-500/20 bg-red-500/5">
-              <h3 className="text-lg font-semibold mb-4 text-red-400">The Problem</h3>
-              <ul className="space-y-3 text-white/60">
-                <li className="flex items-start gap-3">
-                  <span className="text-red-400 mt-1">✕</span>
-                  Spending hours reviewing every inquiry
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-red-400 mt-1">✕</span>
-                  Missing hot leads in your inbox
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-red-400 mt-1">✕</span>
-                  Following up with unqualified prospects
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-red-400 mt-1">✕</span>
-                  No visibility into lead quality
-                </li>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '5rem' }}>
+            <div style={{ padding: '2rem', borderRadius: '1rem', border: '1px solid #fecaca', backgroundColor: '#fff5f5' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#dc2626' }}>The Problem</h3>
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#737373' }}>
+                {['Spending hours reviewing every inquiry', 'Missing hot leads in your inbox', 'Following up with unqualified prospects', 'No visibility into lead quality'].map(item => (
+                  <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <span style={{ color: '#f87171', marginTop: '0.125rem', flexShrink: 0 }}>✕</span>{item}
+                  </li>
+                ))}
               </ul>
             </div>
-            <div className="p-8 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
-              <h3 className="text-lg font-semibold mb-4 text-emerald-400">The Aclea Solution</h3>
-              <ul className="space-y-3 text-white/60">
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 mt-1">✓</span>
-                  AI scores leads in seconds
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 mt-1">✓</span>
-                  Instant notifications for top leads
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 mt-1">✓</span>
-                  Auto-qualify with 50+ criteria
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-400 mt-1">✓</span>
-                  Real-time analytics dashboard
-                </li>
+            <div style={{ padding: '2rem', borderRadius: '1rem', border: '1px solid #bbf7d0', backgroundColor: '#f0fdf4' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#16a34a' }}>The Aclea Solution</h3>
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#737373' }}>
+                {['AI scores leads in seconds', 'Instant notifications for top leads', 'Auto-qualify with 50+ criteria', 'Real-time analytics dashboard'].map(item => (
+                  <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <span style={{ color: '#22c55e', marginTop: '0.125rem', flexShrink: 0 }}>✓</span>{item}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
 
           {/* Features */}
-          <div className="mb-20">
-            <h2 className="text-3xl font-bold mb-4 text-center">Powerful Features</h2>
-            <p className="text-white/60 text-center mb-12 max-w-2xl mx-auto">
-              Everything you need to automate lead qualification and close more deals.
-            </p>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feature, index) => (
-                <div key={index} className="p-6 rounded-2xl border border-white/10 bg-white/5 hover:border-emerald-500/30 transition-colors">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-600/20 flex items-center justify-center mb-4">
-                    <feature.icon className="size-6 text-emerald-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-white/60 text-sm mb-4">{feature.description}</p>
-                  <ul className="space-y-2">
-                    {feature.benefits.map((benefit, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm text-white/50">
-                        <Check className="size-4 text-emerald-400" />
-                        {benefit}
+          <div style={{ marginBottom: '5rem' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.75rem', textAlign: 'center', letterSpacing: '-0.02em' }}>Powerful Features</h2>
+            <p style={{ color: '#737373', textAlign: 'center', marginBottom: '3rem', maxWidth: '36rem', margin: '0 auto 3rem' }}>Everything you need to automate lead qualification and close more deals.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+              {features.map((feature, i) => (
+                <div key={i} style={S.card}>
+                  <div style={S.iconBox}><feature.icon style={{ width: '1.25rem', height: '1.25rem', color: '#111111' }} /></div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{feature.title}</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#737373', marginBottom: '1rem' }}>{feature.description}</p>
+                  <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    {feature.benefits.map((b, j) => (
+                      <li key={j} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#737373' }}>
+                        <Check style={{ width: '0.875rem', height: '0.875rem', color: '#111111', flexShrink: 0 }} />{b}
                       </li>
                     ))}
                   </ul>
@@ -183,97 +117,46 @@ export default function SolutionPage() {
           </div>
 
           {/* Use Cases */}
-          <div className="mb-20">
-            <h2 className="text-3xl font-bold mb-4 text-center">Built for Your Industry</h2>
-            <p className="text-white/60 text-center mb-12 max-w-2xl mx-auto">
-              Aclea adapts to your specific business needs.
-            </p>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {useCases.map((useCase, index) => (
-                <div key={index} className="p-6 rounded-2xl border border-white/10 bg-white/5 text-center hover:bg-white/10 transition-colors">
-                  <useCase.icon className="size-8 text-emerald-400 mx-auto mb-4" />
-                  <h3 className="font-semibold mb-2">{useCase.title}</h3>
-                  <p className="text-white/60 text-sm">{useCase.description}</p>
+          <div style={{ marginBottom: '5rem' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.75rem', textAlign: 'center', letterSpacing: '-0.02em' }}>Built for Your Industry</h2>
+            <p style={{ color: '#737373', textAlign: 'center', marginBottom: '3rem', maxWidth: '36rem', margin: '0 auto 3rem' }}>Aclea adapts to your specific business needs.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+              {useCases.map((u, i) => (
+                <div key={i} style={{ ...S.card, textAlign: 'center' }}>
+                  <div style={{ ...S.iconBox, margin: '0 auto 1rem' }}><u.icon style={{ width: '1.25rem', height: '1.25rem', color: '#111111' }} /></div>
+                  <h3 style={{ fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.875rem' }}>{u.title}</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#737373' }}>{u.description}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* How It Works */}
-          <div className="mb-20">
-            <h2 className="text-3xl font-bold mb-4 text-center">How It Works</h2>
-            <p className="text-white/60 text-center mb-12 max-w-2xl mx-auto">
-              Get started in minutes, not days.
-            </p>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                  1
-                </div>
-                <h3 className="font-semibold mb-2">Connect Your Channels</h3>
-                <p className="text-white/60 text-sm">
-                  Integrate WhatsApp, Email, Web Forms, or use our API to capture leads automatically.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                  2
-                </div>
-                <h3 className="font-semibold mb-2">AI Qualifies Instantly</h3>
-                <p className="text-white/60 text-sm">
-                  Our AI analyzes each lead and scores them based on 50+ criteria in real-time.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                  3
-                </div>
-                <h3 className="font-semibold mb-2">Focus on Winners</h3>
-                <p className="text-white/60 text-sm">
-                  Get notified of high-quality leads and start closing deals faster than ever.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-20">
-            <div className="text-center p-6">
-              <div className="text-4xl font-bold text-emerald-400 mb-2">50+</div>
-              <div className="text-white/60 text-sm">Qualification Criteria</div>
-            </div>
-            <div className="text-center p-6">
-              <div className="text-4xl font-bold text-emerald-400 mb-2">85%</div>
-              <div className="text-white/60 text-sm">Time Saved</div>
-            </div>
-            <div className="text-center p-6">
-              <div className="text-4xl font-bold text-emerald-400 mb-2">3x</div>
-              <div className="text-white/60 text-sm">More Conversions</div>
-            </div>
-            <div className="text-center p-6">
-              <div className="text-4xl font-bold text-emerald-400 mb-2">24/7</div>
-              <div className="text-white/60 text-sm">AI Availability</div>
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', backgroundColor: '#e5e5e5', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #e5e5e5', marginBottom: '5rem' }}>
+            {[{ value: '50+', label: 'Qualification Criteria' }, { value: '85%', label: 'Time Saved' }, { value: '3x', label: 'More Conversions' }, { value: '24/7', label: 'AI Availability' }].map(({ value, label }) => (
+              <div key={label} style={{ textAlign: 'center', padding: '2rem', backgroundColor: '#ffffff' }}>
+                <div style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '0.5rem', color: '#111111' }}>{value}</div>
+                <div style={{ fontSize: '0.875rem', color: '#737373' }}>{label}</div>
+              </div>
+            ))}
           </div>
 
           {/* CTA */}
-          <div className="text-center p-12 rounded-3xl border border-white/10 bg-black">
-            <Clock className="size-12 text-emerald-400 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold mb-4">Ready to Qualify Leads Smarter?</h2>
-            <p className="text-white/60 mb-8 max-w-xl mx-auto">
-              Join hundreds of businesses using Aclea to save time and close more deals.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
-                <Link href="/contact">Talk to Sales</Link>
-              </Button>
+          <div style={{ textAlign: 'center', padding: '3rem', borderRadius: '1.5rem', border: '1px solid #e5e5e5', backgroundColor: '#ffffff' }}>
+            <div style={{ width: '3rem', height: '3rem', borderRadius: '50%', backgroundColor: '#111111', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+              <Clock style={{ width: '1.5rem', height: '1.5rem', color: '#ffffff' }} />
             </div>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem', letterSpacing: '-0.02em' }}>Ready to Qualify Leads Smarter?</h2>
+            <p style={{ color: '#737373', marginBottom: '2rem', maxWidth: '32rem', margin: '0 auto 2rem' }}>Join hundreds of businesses using Aclea to save time and close more deals.</p>
+            <Link href="/contact" style={S.primaryBtn}>
+              Talk to Sales <ArrowRight style={{ width: '1rem', height: '1rem' }} />
+            </Link>
           </div>
         </div>
       </main>
 
-      <footer className="border-t border-white/10 bg-black/50 py-8 px-6">
-        <div className="max-w-6xl mx-auto text-center text-white/40 text-sm">
+      <footer style={S.footer}>
+        <div style={{ maxWidth: '72rem', margin: '0 auto', textAlign: 'center', color: '#a3a3a3', fontSize: '0.875rem' }}>
           &copy; {new Date().getFullYear()} Aclea GmbH. All rights reserved.
         </div>
       </footer>

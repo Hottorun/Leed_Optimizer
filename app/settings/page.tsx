@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { User, Bell, Shield, Database, Key, Moon, ChevronRight, ArrowLeft, Check, X, AlertTriangle, Bot, Loader2, Users, LogOut, Crown, UserPlus, UserMinus, Copy, Trash2 } from "lucide-react"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
+import { AppHeader } from "@/components/app-header"
 import { cn } from "@/lib/utils"
 import { useUser } from "@/lib/use-user"
 import { useTheme } from "next-themes"
@@ -359,19 +360,9 @@ export default function Settings() {
   }
 
   return (
-    <ThemeBackground className="p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-        </div>
-
+    <ThemeBackground>
+      <AppHeader onRefresh={() => {}} isRefreshing={false} user={user ? { name: user.name, email: user.email } : undefined} leads={[]} />
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Manage your account</p>

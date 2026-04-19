@@ -88,8 +88,10 @@ export function AppHeader({ onRefresh, isRefreshing, user, leads = [], navigatio
   const navItems = [
     { name: "Dashboard", path: "/dashboard" },
     { name: "Leads", path: "/leads" },
+    { name: "Messages", path: "/messages" },
     { name: "Analytics", path: "/analytics" },
     { name: "Calendar", path: "/calendar" },
+    { name: "Settings", path: "/settings" },
   ]
 
   const notifications = leads

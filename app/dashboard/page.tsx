@@ -12,7 +12,7 @@ import { useUser } from "@/lib/use-user"
 import { getLeadStatus, getLeadRating, getLeadInitials } from "@/lib/lead-utils"
 import {
   Clock, Star, ChevronRight,
-  ArrowRight, CheckCircle2, Users
+  ArrowRight, CheckCircle2, Users, Sparkles
 } from "lucide-react"
 import type { Lead } from "@/lib/types"
 import { useEffect } from "react"
@@ -243,6 +243,26 @@ export default function DashboardPage() {
               <p className={cn("text-xs mt-1", stats.approved > 0 ? "text-[var(--status-approved)] font-medium" : "text-muted-foreground")}>{stats.approved > 0 ? "Ready to convert" : "No approved leads"}</p>
             </Link>
           </div>
+
+          {/* Zero-state CTA */}
+          {stats.totalLeads === 0 && (
+            <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-muted mb-3">
+                <Sparkles className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <h3 className="text-sm font-semibold mb-1">No leads yet</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-xs mx-auto">
+                Connect your WhatsApp or email bot to start receiving and qualifying leads automatically.
+              </p>
+              <Link
+                href="/settings/ai"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:bg-foreground/90 transition-colors"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Set up AI
+              </Link>
+            </div>
+          )}
 
           {/* Two Column Layout */}
           <div className="grid md:grid-cols-2 gap-4">

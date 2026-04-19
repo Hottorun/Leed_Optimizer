@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { AppHeader } from "@/components/app-header"
 import { LeadDetailPanel } from "@/components/lead-detail-panel"
 import { ImportLeadModal } from "@/components/import-lead-modal"
-import { Search, Mail, Plus, ChevronRight, ChevronDown, ArrowUpDown, LayoutGrid, List, Clock, Star, X, Check, CheckCircle2, AlertCircle, Sparkles, Zap } from "lucide-react"
+import { Search, Mail, Plus, ChevronRight, ChevronDown, ArrowUpDown, LayoutGrid, List, Clock, Star, X, Check, CheckCircle2, AlertCircle, Sparkles, Zap, MessageCircle } from "lucide-react"
 import type { Lead } from "@/lib/types"
 import { getSafeString } from "@/lib/lead-utils"
 import { cn } from "@/lib/utils"
@@ -572,7 +572,7 @@ function LeadsContent() {
       {/* Page Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ fontWeight: 600, letterSpacing: "-0.5px" }}>Needs Action</h1>
+          <h1 className="text-xl font-semibold" style={{ fontWeight: 600, letterSpacing: "-0.5px" }}>Needs Review</h1>
           <p className="text-sm text-muted-foreground mt-1">Review and decide on these leads</p>
         </div>
       </div>
@@ -714,15 +714,15 @@ function LeadsContent() {
         onClick={() => setSelectedLead(lead)}
         className="border-b border-border hover:bg-muted/60 cursor-pointer transition-colors"
       >
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 max-w-[180px]">
           <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
               {initials}
             </div>
-            <span className="text-sm font-medium">{lead.name}</span>
+            <span className="text-sm font-medium truncate">{lead.name}</span>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">
+        <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell max-w-[160px] truncate">
           {lead.email || lead.phone || "-"}
         </td>
         <td className="px-4 py-3">
@@ -737,19 +737,26 @@ function LeadsContent() {
           </span>
         </td>
         <td className="px-4 py-3">
-          <div className="flex items-center gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className={cn(
-                "h-3 w-3",
-                i < rating ? "text-yellow-400 fill-yellow-400" : "text-border"
-              )} />
-            ))}
+          <span className={cn(
+            "text-xs font-semibold px-2 py-0.5 rounded-md tabular-nums",
+            rating >= 4 ? "bg-[var(--status-approved-bg)] text-[var(--status-approved)]" :
+            rating >= 2 ? "bg-[var(--status-pending-bg)] text-[var(--status-pending)]" :
+            "bg-muted text-muted-foreground"
+          )}>
+            {Math.round((rating / 5) * 100)}
+          </span>
+        </td>
+        <td className="px-4 py-3 hidden sm:table-cell">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            {source === "whatsapp" ? (
+              <MessageCircle className="h-3.5 w-3.5 text-green-600" />
+            ) : (
+              <Mail className="h-3.5 w-3.5 text-blue-500" />
+            )}
+            {source === "whatsapp" ? "WhatsApp" : "Email"}
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-          {source === "whatsapp" ? "WhatsApp" : "Email"}
-        </td>
-        <td className="px-4 py-3 text-xs text-muted-foreground">
+        <td className="px-4 py-3 text-xs text-muted-foreground" title={new Date(lead.createdAt).toLocaleString()}>
           {getTimeAgo(lead.createdAt)}
         </td>
       </tr>
@@ -825,7 +832,7 @@ function LeadsContent() {
                 : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
             )}
           >
-            Needs Action
+            Needs Review
             {stats.needsAction > 0 && (
               <span className={cn(
                 "px-1.5 py-0.5 text-xs rounded-full font-medium",
@@ -950,7 +957,7 @@ function LeadsContent() {
                       <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Name</th>
                       <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">Contact</th>
                       <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Status</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Rating</th>
+                      <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Score</th>
                       <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground hidden sm:table-cell">Source</th>
                       <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Time</th>
                     </tr>
