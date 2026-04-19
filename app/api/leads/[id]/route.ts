@@ -47,7 +47,15 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const updatedLead = await updateLead(id, body)
+
+    // Allowlist only fields clients are permitted to update
+    const ALLOWED_FIELDS = ["name", "phone", "email", "status", "isLoyal", "autoApproved", "lastContactedAt"] as const
+    const safeUpdates: Partial<import("@/lib/types").Lead> = {}
+    for (const key of ALLOWED_FIELDS) {
+      if (key in body) (safeUpdates as Record<string, unknown>)[key] = body[key]
+    }
+
+    const updatedLead = await updateLead(id, safeUpdates)
 
     if (!updatedLead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 })

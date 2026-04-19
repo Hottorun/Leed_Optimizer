@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Bell, User, LogOut, Settings, ChevronDown, Loader2, Menu, X, CheckCircle, AlertCircle, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getTimeAgo } from "@/lib/lead-utils"
 import type { Lead } from "@/lib/types"
 
 interface AppHeaderProps {
   onRefresh: () => void
   isRefreshing: boolean
-  notificationCount?: number
   user?: {
     name?: string
     email?: string
@@ -19,13 +19,14 @@ interface AppHeaderProps {
   navigationGuard?: (path: string, proceed: () => void) => void
 }
 
-export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user, leads = [], navigationGuard }: AppHeaderProps) {
+export function AppHeader({ onRefresh, isRefreshing, user, leads = [], navigationGuard }: AppHeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [logoutError, setLogoutError] = useState(false)
   const notificationRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
@@ -42,19 +43,9 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Close mobile menu on route change
   useEffect(() => {
     setShowMobileMenu(false)
   }, [pathname])
-
-  const getActivePage = () => {
-    if (pathname === "/dashboard") return "Dashboard"
-    if (pathname === "/leads") return "Leads"
-    if (pathname === "/analytics") return "Analytics"
-    if (pathname === "/calendar") return "Calendar"
-    if (pathname?.startsWith("/settings")) return "Settings"
-    return "Dashboard"
-  }
 
   const navigate = (path: string) => {
     if (navigationGuard) {
@@ -69,14 +60,29 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
       navigationGuard("/dashboard", () => {
         setIsLoading(true)
         router.push("/dashboard")
-        setTimeout(() => setIsLoading(false), 1000)
       })
     } else {
       setIsLoading(true)
       router.push("/dashboard")
-      setTimeout(() => setIsLoading(false), 1000)
     }
   }
+
+  // Stop spinner once navigation completes (pathname changes)
+  useEffect(() => {
+    setIsLoading(false)
+  }, [pathname])
+
+  const handleLogout = useCallback(async () => {
+    setLogoutError(false)
+    try {
+      const res = await fetch("/api/auth", { method: "DELETE" })
+      if (!res.ok) throw new Error("Logout failed")
+      router.push("/login")
+    } catch {
+      setLogoutError(true)
+      setTimeout(() => setLogoutError(false), 3000)
+    }
+  }, [router])
 
   const navItems = [
     { name: "Dashboard", path: "/dashboard" },
@@ -85,20 +91,6 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
     { name: "Calendar", path: "/calendar" },
   ]
 
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return "just now"
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    return `${diffDays}d ago`
-  }
-
   const notifications = leads
     .filter(lead => {
       const createdAt = new Date(lead.createdAt)
@@ -106,7 +98,6 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
       const now = new Date()
       const createdDiff = (now.getTime() - createdAt.getTime()) / 3600000
       const updatedDiff = (now.getTime() - updatedAt.getTime()) / 3600000
-      // Include leads created in last 24h OR leads with status change in last 24h
       const status = lead.session?.status || lead.status
       const isAutoProcessed = status === "approved" || status === "declined"
       return createdDiff <= 24 || (isAutoProcessed && lead.autoApproved && updatedDiff <= 24)
@@ -118,10 +109,6 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
     })
     .map(lead => {
       const status = lead.session?.status || lead.status
-      const createdAt = new Date(lead.createdAt)
-      const now = new Date()
-      const isNew = (now.getTime() - createdAt.getTime()) <= 3600000
-
       let text: string
       let type: "new" | "approved" | "declined" | "manual"
 
@@ -145,12 +132,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
         type = "new"
       }
 
-      return {
-        id: lead.id,
-        text,
-        time: getTimeAgo(lead.updatedAt || lead.createdAt),
-        type,
-      }
+      return { id: lead.id, text, time: getTimeAgo(lead.updatedAt || lead.createdAt), type }
     })
 
   const unreadCount = notifications.length
@@ -176,7 +158,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
 
             <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
-                const isActive = getActivePage() === item.name
+                const isActive = pathname === item.path || pathname?.startsWith(item.path + "/")
                 return (
                   <button
                     key={item.name}
@@ -231,23 +213,15 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
                           key={notif.id}
                           onClick={() => {
                             setShowNotifications(false)
-                            window.location.href = `/leads?id=${notif.id}`
+                            router.push(`/leads?id=${notif.id}`)
                           }}
                           className="w-full px-3 py-2.5 text-left border-b border-border last:border-0 hover:bg-muted transition-colors flex items-start gap-2.5"
                         >
                           <div className="mt-0.5 shrink-0">
-                            {notif.type === "approved" && (
-                              <CheckCircle className="h-3.5 w-3.5 text-[var(--status-approved)]" />
-                            )}
-                            {notif.type === "declined" && (
-                              <X className="h-3.5 w-3.5 text-[var(--status-declined)]" />
-                            )}
-                            {notif.type === "manual" && (
-                              <AlertCircle className="h-3.5 w-3.5 text-[var(--status-manual)]" />
-                            )}
-                            {notif.type === "new" && (
-                              <Zap className="h-3.5 w-3.5 text-muted-foreground" />
-                            )}
+                            {notif.type === "approved" && <CheckCircle className="h-3.5 w-3.5 text-[var(--status-approved)]" />}
+                            {notif.type === "declined" && <X className="h-3.5 w-3.5 text-[var(--status-declined)]" />}
+                            {notif.type === "manual" && <AlertCircle className="h-3.5 w-3.5 text-[var(--status-manual)]" />}
+                            {notif.type === "new" && <Zap className="h-3.5 w-3.5 text-muted-foreground" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-foreground truncate">{notif.text}</p>
@@ -259,10 +233,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
                   </div>
                   <div className="px-3 py-2 border-t border-border">
                     <button
-                      onClick={() => {
-                        setShowNotifications(false)
-                        router.push("/leads")
-                      }}
+                      onClick={() => { setShowNotifications(false); router.push("/leads") }}
                       className="text-xs text-muted-foreground hover:text-foreground font-medium"
                     >
                       View all leads →
@@ -302,21 +273,11 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
                       Settings
                     </button>
                     <button
-                      onClick={async () => {
-                        const doLogout = async () => {
-                          await fetch("/api/auth", { method: "DELETE" })
-                          router.push("/login")
-                        }
-                        if (navigationGuard) {
-                          navigationGuard("/login", doLogout)
-                        } else {
-                          await doLogout()
-                        }
-                      }}
+                      onClick={() => navigationGuard ? navigationGuard("/login", handleLogout) : handleLogout()}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
                     >
                       <LogOut className="h-4 w-4" />
-                      Log out
+                      {logoutError ? "Logout failed — try again" : "Log out"}
                     </button>
                   </div>
                 </div>
@@ -338,7 +299,7 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
           <div className="md:hidden border-t border-border bg-background">
             <nav className="px-4 py-3 space-y-1">
               {navItems.map((item) => {
-                const isActive = getActivePage() === item.name
+                const isActive = pathname === item.path || pathname?.startsWith(item.path + "/")
                 return (
                   <button
                     key={item.name}
@@ -368,21 +329,11 @@ export function AppHeader({ onRefresh, isRefreshing, notificationCount = 0, user
                 Settings
               </button>
               <button
-                onClick={async () => {
-                  const doLogout = async () => {
-                    await fetch("/api/auth", { method: "DELETE" })
-                    router.push("/login")
-                  }
-                  if (navigationGuard) {
-                    navigationGuard("/login", doLogout)
-                  } else {
-                    await doLogout()
-                  }
-                }}
+                onClick={() => navigationGuard ? navigationGuard("/login", handleLogout) : handleLogout()}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted rounded-md transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                Log out
+                {logoutError ? "Logout failed — try again" : "Log out"}
               </button>
             </div>
           </div>

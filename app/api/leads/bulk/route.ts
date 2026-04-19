@@ -1,21 +1,6 @@
 import { NextResponse } from "next/server"
-import { cookies } from "next/headers"
 import { deleteAllLeads, deleteDeclinedLeadsOlderThan } from "@/lib/supabase"
-
-interface User {
-  teamId?: string
-}
-
-async function getCurrentUser(): Promise<User | null> {
-  const cookieStore = await cookies()
-  const token = cookieStore.get("auth_token")
-  if (!token) return null
-  try {
-    return JSON.parse(token.value) as User
-  } catch {
-    return null
-  }
-}
+import { getCurrentUser } from "@/lib/auth"
 
 export async function DELETE(request: Request) {
   const user = await getCurrentUser()
@@ -27,7 +12,7 @@ export async function DELETE(request: Request) {
   const action = searchParams.get("action")
 
   if (action === "all") {
-    const success = await deleteAllLeads()
+    const success = await deleteAllLeads(user.teamId)
     if (!success) {
       return NextResponse.json(
         { error: "Failed to delete all leads" },

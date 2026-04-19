@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { User, Bell, Shield, Database, Key, Moon, ChevronRight, ArrowLeft, Check, X, AlertTriangle, Bot, Loader2, Users, LogOut, Crown, UserPlus, UserMinus, Copy } from "lucide-react"
+import { User, Bell, Shield, Database, Key, Moon, ChevronRight, ArrowLeft, Check, X, AlertTriangle, Bot, Loader2, Users, LogOut, Crown, UserPlus, UserMinus, Copy, Trash2 } from "lucide-react"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { cn } from "@/lib/utils"
 import { useUser } from "@/lib/use-user"
@@ -10,7 +10,7 @@ import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { UserSettings } from "@/lib/types"
+import { Switch } from "@/components/ui/switch"
 
 interface TeamMember {
   id: string
@@ -23,10 +23,9 @@ interface TeamMember {
 export default function Settings() {
   const router = useRouter()
   const { user, loading: userLoading } = useUser()
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [themeReady, setThemeReady] = useState(false)
-  const themeInitialized = useRef(false)
+  const [isDark, setIsDark] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null)
@@ -41,13 +40,15 @@ export default function Settings() {
   const [newMember, setNewMember] = useState({ email: "", name: "", password: "", role: "member" as "admin" | "member" })
   const [isAddingMember, setIsAddingMember] = useState(false)
   const [teamError, setTeamError] = useState<string | null>(null)
+  const [autoDeleteEnabled, setAutoDeleteEnabled] = useState(false)
+  const [autoDeleteDays, setAutoDeleteDays] = useState(30)
+  const [isSavingAutoDelete, setIsSavingAutoDelete] = useState(false)
 
   const isAdminOrOwner = user?.teamRole === "admin" || user?.teamRole === "owner"
 
   useEffect(() => {
     setMounted(true)
-    const timer = setTimeout(() => setThemeReady(true), 100)
-    return () => clearTimeout(timer)
+    setIsDark(document.documentElement.classList.contains("dark"))
   }, [])
 
   useEffect(() => {
@@ -57,22 +58,18 @@ export default function Settings() {
   }, [user, userLoading, router])
 
   useEffect(() => {
-    if (!user?.id || themeInitialized.current) return
-
-    fetch("/api/settings/user")
+    if (!user?.id) return
+    setIsLoading(false)
+    fetch("/api/settings")
       .then(res => res.json())
-      .then((data: UserSettings) => {
-        if (data && typeof data === 'object' && 'theme' in data) {
-          const savedTheme = data.theme || "light"
-          if (savedTheme !== theme) {
-            setTheme(savedTheme)
-          }
+      .then(data => {
+        if (typeof data.autoDeleteDeclinedDays === "number") {
+          setAutoDeleteEnabled(data.autoDeleteDeclinedDays > 0)
+          setAutoDeleteDays(data.autoDeleteDeclinedDays > 0 ? data.autoDeleteDeclinedDays : 30)
         }
-        themeInitialized.current = true
       })
       .catch(console.error)
-      .finally(() => setIsLoading(false))
-  }, [user?.id, theme, setTheme])
+  }, [user?.id])
 
   useEffect(() => {
     if (!user?.id || !isAdminOrOwner) return
@@ -95,27 +92,29 @@ export default function Settings() {
   }, [showTeamDialog, isAdminOrOwner])
 
   const toggleDarkMode = async () => {
-    const currentMode = theme || "light"
-    const newMode = currentMode === "dark" ? "light" : "dark"
+    const newMode = isDark ? "light" : "dark"
+    setIsDark(newMode === "dark")
 
+    // Direct DOM update — immediate and reliable regardless of next-themes timing
+    document.documentElement.classList.toggle("dark", newMode === "dark")
+    document.documentElement.setAttribute("data-mode", newMode)
+    localStorage.setItem("theme", newMode)
+
+    // Sync next-themes state
     setTheme(newMode)
-    showToast(newMode === "dark" ? "Dark mode enabled" : "Light mode enabled", "success")
 
+    showToast(!isDark ? "Dark mode enabled" : "Light mode enabled", "success")
+
+    setIsSaving(true)
     try {
-      const userResponse = await fetch("/api/auth")
-      const userData = await userResponse.json()
-
-      if (userData.user?.id) {
-        setIsSaving(true)
-        await fetch("/api/settings/user", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ theme: newMode })
-        })
-        setIsSaving(false)
-      }
+      await fetch("/api/settings/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: newMode }),
+      })
     } catch (e) {
       console.error("Failed to save theme preference", e)
+    } finally {
       setIsSaving(false)
     }
   }
@@ -297,6 +296,22 @@ export default function Settings() {
     }
   }
 
+  const handleSaveAutoDelete = async () => {
+    setIsSavingAutoDelete(true)
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoDeleteDeclinedDays: autoDeleteEnabled ? autoDeleteDays : 0 }),
+      })
+      showToast("Auto-delete setting saved", "success")
+    } catch {
+      showToast("Failed to save", "error")
+    } finally {
+      setIsSavingAutoDelete(false)
+    }
+  }
+
   const sections = [
     ...(isAdminOrOwner ? [{
       title: "Team",
@@ -403,21 +418,51 @@ export default function Settings() {
                   <Moon className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Dark Mode</span>
                 </div>
-                <button
-                  onClick={toggleDarkMode}
+                <Switch
+                  checked={mounted && isDark}
+                  onCheckedChange={toggleDarkMode}
                   disabled={isSaving || !mounted}
-                  className={cn(
-                    "relative w-11 h-6 rounded-full transition-colors duration-200",
-                    mounted && theme === "dark" ? "bg-foreground" : "bg-border",
-                    isSaving && "opacity-50"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "absolute top-1 w-4 h-4 rounded-full shadow-sm transition-transform duration-200",
-                      mounted && theme === "dark" ? "bg-card translate-x-6" : "bg-card translate-x-1"
-                    )}
+                  className="[--thumb-size:22px] sm:[--thumb-size:22px]"
+                />
+              </div>
+            </div>
+
+            {/* Auto-delete declined leads */}
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-medium">Declined Leads</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Auto-delete after</span>
+                  <Switch
+                    checked={autoDeleteEnabled}
+                    onCheckedChange={setAutoDeleteEnabled}
+                    className="[--thumb-size:22px] sm:[--thumb-size:22px]"
                   />
+                </div>
+                {autoDeleteEnabled && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={autoDeleteDays}
+                      onChange={e => setAutoDeleteDays(Math.max(1, Math.min(365, Number(e.target.value))))}
+                      className="w-16 h-8 rounded-md border border-border px-2 text-sm text-center"
+                      style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
+                    />
+                    <span className="text-sm text-muted-foreground">days</span>
+                  </div>
+                )}
+                <button
+                  onClick={handleSaveAutoDelete}
+                  disabled={isSavingAutoDelete}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-foreground text-background text-xs font-medium rounded-md hover:bg-foreground/90 transition-colors disabled:opacity-50"
+                >
+                  {isSavingAutoDelete ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  Save
                 </button>
               </div>
             </div>

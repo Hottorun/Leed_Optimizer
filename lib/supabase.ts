@@ -405,18 +405,18 @@ export async function deleteLead(id: string): Promise<boolean> {
   return true
 }
 
-export async function deleteAllLeads(): Promise<boolean> {
+export async function deleteAllLeads(teamId: string): Promise<boolean> {
   const client = getSupabase()
-  
+
   if (!client) {
-    inMemoryLeads = []
+    inMemoryLeads = inMemoryLeads.filter((l) => l.teamId !== teamId)
     return true
   }
 
   const { error } = await client
     .from("leads")
     .delete()
-    .neq("id", "")
+    .eq("team_id", teamId)
 
   if (error) {
     console.error("Error deleting all leads:", error)

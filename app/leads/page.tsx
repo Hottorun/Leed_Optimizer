@@ -11,6 +11,7 @@ import type { Lead } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { ThemeBackground } from "@/lib/use-theme-gradient"
 import { useUser } from "@/lib/use-user"
+import { toast } from "sonner"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -29,7 +30,8 @@ function LeadsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading: userLoading } = useUser()
-  const { data: leads = [], mutate } = useSWR<Lead[]>("/api/leads", fetcher, { refreshInterval: 30000 })
+  const { data: leadsData, mutate } = useSWR<Lead[]>("/api/leads", fetcher, { refreshInterval: 30000 })
+  const leads = Array.isArray(leadsData) ? leadsData : []
   const [activeTab, setActiveTab] = useState<TabType>("all")
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -40,7 +42,7 @@ function LeadsContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedActionLeads, setSelectedActionLeads] = useState<Set<string>>(new Set())
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
-  const [toast, setToast] = useState<{ message: string; id: string } | null>(null)
+  const [newLeadNotif, setNewLeadNotif] = useState<{ message: string; id: string } | null>(null)
   const prevLeadIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -63,7 +65,7 @@ function LeadsContent() {
       setActiveTab("action")
     } else if (filter) {
       setActiveTab("all")
-      if (filter) setStatusFilter(filter)
+      setStatusFilter(filter)
     }
   }, [])
 
@@ -83,13 +85,13 @@ function LeadsContent() {
       const newLeads = leads.filter(l => !prevLeadIdsRef.current.has(l.id))
       if (newLeads.length > 0) {
         const lead = newLeads[0]
-        setToast({
+        setNewLeadNotif({
           message: newLeads.length === 1
             ? `New lead: ${lead.name}`
             : `${newLeads.length} new leads received`,
           id: lead.id,
         })
-        setTimeout(() => setToast(null), 5000)
+        setTimeout(() => setNewLeadNotif(null), 5000)
       }
     }
     prevLeadIdsRef.current = currentIds
@@ -102,7 +104,6 @@ function LeadsContent() {
     if (Array.isArray(collectedData)) return collectedData[0] || {}
     return collectedData
   }
-
   const getLeadSource = (lead: Lead): string => {
     const collectedData = getCollectedDataFirst(lead.session?.collectedData)
     if (collectedData?.source) return collectedData.source as string
@@ -110,63 +111,110 @@ function LeadsContent() {
     if (lead.email) return "email"
     return ""
   }
+  const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").slice(0, 2)
 
   const handleApproveLead = async (leadId: string) => {
     try {
-      await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "approved" }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || "Failed to approve lead")
+      }
       mutate()
-    } catch (error) {
-      console.error("Failed to approve lead:", error)
+    } catch {
+      toast.error("Failed to approve lead")
     }
   }
 
   const handleDeclineLead = async (leadId: string) => {
     try {
-      await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "declined" }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || "Failed to decline lead")
+      }
       mutate()
-    } catch (error) {
-      console.error("Failed to decline lead:", error)
+    } catch {
+      toast.error("Failed to decline lead")
     }
   }
 
   const handleBatchApprove = async () => {
-    for (const leadId of selectedActionLeads) {
-      try {
-        await fetch(`/api/leads/${leadId}`, {
+    const ids = Array.from(selectedActionLeads)
+    const results = await Promise.allSettled(
+      ids.map(leadId =>
+        fetch(`/api/leads/${leadId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: "approved" }),
         })
-      } catch (error) {
-        console.error("Failed to approve lead:", error)
-      }
-    }
+      )
+    )
+    const failed = results.filter(r => r.status === "rejected").length
     setSelectedActionLeads(new Set())
     mutate()
+    if (failed > 0) {
+      toast.error(`${failed} lead${failed > 1 ? "s" : ""} failed to approve`)
+    }
+  }
+
+  const handleDeleteLead = async (leadId: string) => {
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, { method: "DELETE" })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to delete lead")
+      }
+      if (selectedLead?.id === leadId) setSelectedLead(null)
+      mutate()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to delete lead"
+      throw new Error(msg)
+    }
+  }
+
+  const handleDeleteAllDeclined = async () => {
+    const ids = declinedLeads.map(l => l.id)
+    const results = await Promise.allSettled(
+      ids.map(id => fetch(`/api/leads/${id}`, { method: "DELETE" }))
+    )
+    const failed = results.filter(r => r.status === "rejected").length
+    setSelectedActionLeads(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => next.delete(id))
+      return next
+    })
+    mutate()
+    if (failed > 0) {
+      toast.error(`${failed} lead${failed > 1 ? "s" : ""} failed to delete`)
+    }
   }
 
   const handleBatchDecline = async () => {
-    for (const leadId of selectedActionLeads) {
-      try {
-        await fetch(`/api/leads/${leadId}`, {
+    const ids = Array.from(selectedActionLeads)
+    const results = await Promise.allSettled(
+      ids.map(leadId =>
+        fetch(`/api/leads/${leadId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: "declined" }),
         })
-      } catch (error) {
-        console.error("Failed to decline lead:", error)
-      }
-    }
+      )
+    )
+    const failed = results.filter(r => r.status === "rejected").length
     setSelectedActionLeads(new Set())
     mutate()
+    if (failed > 0) {
+      toast.error(`${failed} lead${failed > 1 ? "s" : ""} failed to decline`)
+    }
   }
 
   const toggleSelectAll = () => {
@@ -185,10 +233,6 @@ function LeadsContent() {
       newSet.add(leadId)
     }
     setSelectedActionLeads(newSet)
-  }
-
-  const getInitials = (name: string) => {
-    return name.split(" ").map(n => n[0]).join("").slice(0, 2)
   }
 
   const getTimeAgo = (date: Date | string) => {
@@ -254,22 +298,6 @@ function LeadsContent() {
   const progressPercent = toReviewCount > 0 ? Math.min((reviewedCount / toReviewCount) * 100, 100) : 0
   const minsToFinish = Math.ceil((toReviewCount - reviewedCount) * 0.5)
 
-  const sortLeads = (leadsToSort: Lead[]) => {
-    return [...leadsToSort].sort((a, b) => {
-      const ratingA = getLeadRating(a)
-      const ratingB = getLeadRating(b)
-      switch (sortBy) {
-        case "newest": return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        case "oldest": return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        case "rating-high": return ratingB - ratingA
-        case "rating-low": return ratingA - ratingB
-        case "name-az": return a.name.localeCompare(b.name)
-        case "name-za": return b.name.localeCompare(a.name)
-        default: return 0
-      }
-    })
-  }
-
   const filteredLeads = useMemo(() => {
     let filtered = leads
 
@@ -289,7 +317,19 @@ function LeadsContent() {
       filtered = filtered.filter(l => getLeadStatus(l) === statusFilter)
     }
 
-    return sortLeads(filtered)
+    return [...filtered].sort((a, b) => {
+      const ratingA = getLeadRating(a)
+      const ratingB = getLeadRating(b)
+      switch (sortBy) {
+        case "newest": return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        case "oldest": return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        case "rating-high": return ratingB - ratingA
+        case "rating-low": return ratingA - ratingB
+        case "name-az": return a.name.localeCompare(b.name)
+        case "name-za": return b.name.localeCompare(a.name)
+        default: return 0
+      }
+    })
   }, [leads, searchQuery, sourceFilter, statusFilter, sortBy])
 
   const renderLeadCard = (lead: Lead) => {
@@ -303,7 +343,7 @@ function LeadsContent() {
       <div
         key={lead.id}
         onClick={() => setSelectedLead(lead)}
-        className="rounded-lg border border-border bg-card p-4 hover:border-foreground/30 transition-all cursor-pointer"
+        className="rounded-lg border border-border bg-card p-4 hover:border-foreground/30 hover:shadow-sm hover:-translate-y-0.5 transition-all cursor-pointer"
       >
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
@@ -389,7 +429,7 @@ function LeadsContent() {
         key={key}
         onClick={() => setSelectedLead(lead)}
         className={cn(
-          "bg-card border border-border rounded-xl overflow-hidden cursor-pointer hover:border-foreground/30 transition-all flex flex-col",
+          "bg-card border border-border rounded-xl overflow-hidden cursor-pointer hover:border-foreground/30 hover:shadow-sm hover:-translate-y-0.5 transition-all flex flex-col",
           isDeclined && "opacity-75",
           isSelected && "ring-2 ring-foreground/50"
         )}
@@ -481,10 +521,13 @@ function LeadsContent() {
           {status === "declined" ? (
             <>
               <button
-                disabled
-                className="flex-1 px-4 py-2.5 text-sm text-muted-foreground bg-muted/50 cursor-default"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDeleteLead(lead.id)
+                }}
+                className="flex-1 px-4 py-2.5 text-sm text-[var(--status-declined)] hover:bg-[var(--status-declined-bg)] transition-colors border-r border-border"
               >
-                Already declined
+                Delete permanently
               </button>
               <button
                 onClick={(e) => {
@@ -619,7 +662,7 @@ function LeadsContent() {
           <p className="text-xs text-muted-foreground mb-3">AI was unsure — your call</p>
           <div className="w-full h-[2px] bg-border opacity-60 mb-4" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sortLeads(manualLeads).map((lead) => renderActionCard(lead, false, lead.id))}
+            {[...manualLeads].sort((a, b) => getLeadRating(b) - getLeadRating(a)).map((lead) => renderActionCard(lead, false, lead.id))}
           </div>
         </div>
       )}
@@ -627,14 +670,22 @@ function LeadsContent() {
       {/* AI Declined Section */}
       {declinedLeads.length > 0 && (
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">AI declined — override?</span>
-            <span className="px-2 py-0.5 text-xs bg-[var(--status-declined-bg)] text-[var(--status-declined)] rounded-full font-medium">{declinedLeads.length}</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">AI declined — override?</span>
+              <span className="px-2 py-0.5 text-xs bg-[var(--status-declined-bg)] text-[var(--status-declined)] rounded-full font-medium">{declinedLeads.length}</span>
+            </div>
+            <button
+              onClick={handleDeleteAllDeclined}
+              className="text-xs text-[var(--status-declined)] hover:bg-[var(--status-declined-bg)] px-2.5 py-1 rounded-md transition-colors"
+            >
+              Delete all declined
+            </button>
           </div>
           <p className="text-xs text-muted-foreground mb-3">AI rejected these — approve only if you disagree</p>
           <div className="w-full h-[2px] bg-border opacity-60 mb-4" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sortLeads(declinedLeads).map((lead) => renderActionCard(lead, true, lead.id))}
+            {[...declinedLeads].sort((a, b) => getLeadRating(b) - getLeadRating(a)).map((lead) => renderActionCard(lead, true, lead.id))}
           </div>
         </div>
       )}
@@ -642,7 +693,7 @@ function LeadsContent() {
       {/* Empty State */}
       {actionLeads.length === 0 && (
         <div className="text-center py-12 border border-border rounded-xl bg-card">
-          <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-[var(--status-approved)]" />
           <h3 className="text-base font-medium">All caught up</h3>
           <p className="text-sm text-muted-foreground mt-1">No leads require attention</p>
         </div>
@@ -660,7 +711,7 @@ function LeadsContent() {
       <tr
         key={lead.id}
         onClick={() => setSelectedLead(lead)}
-        className="border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
+        className="border-b border-border hover:bg-muted/60 cursor-pointer transition-colors"
       >
         <td className="px-4 py-3">
           <div className="flex items-center gap-3">
@@ -709,20 +760,20 @@ function LeadsContent() {
       <AppHeader onRefresh={mutate} isRefreshing={false} user={user ? { name: user.name, email: user.email } : undefined} leads={leads || []} />
 
       {/* New Lead Toast */}
-      {toast && (
+      {newLeadNotif && (
         <div
           className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card shadow-xl cursor-pointer max-w-xs"
           onClick={() => {
-            setToast(null)
-            router.push(`/leads?id=${toast.id}`)
+            setNewLeadNotif(null)
+            router.push(`/leads?id=${newLeadNotif.id}`)
           }}
         >
           <Zap className="h-4 w-4 text-[var(--status-approved)] shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{toast.message}</p>
+            <p className="text-sm font-medium truncate">{newLeadNotif.message}</p>
             <p className="text-xs text-muted-foreground">Click to view</p>
           </div>
-          <button onClick={(e) => { e.stopPropagation(); setToast(null) }} className="text-muted-foreground hover:text-foreground">
+          <button onClick={(e) => { e.stopPropagation(); setNewLeadNotif(null) }} className="text-muted-foreground hover:text-foreground">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -759,7 +810,7 @@ function LeadsContent() {
               "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
               activeTab === "all"
                 ? "border-foreground text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
             )}
           >
             All ({stats.totalLeads})
@@ -769,13 +820,18 @@ function LeadsContent() {
             className={cn(
               "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5",
               activeTab === "action"
-                ? "border-foreground text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-[var(--status-pending)] text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
             )}
           >
             Needs Action
             {stats.needsAction > 0 && (
-              <span className="px-1.5 py-0.5 text-xs rounded-full bg-muted">{stats.needsAction}</span>
+              <span className={cn(
+                "px-1.5 py-0.5 text-xs rounded-full font-medium",
+                activeTab === "action"
+                  ? "bg-[var(--status-pending-bg)] text-[var(--status-pending)]"
+                  : "bg-muted text-muted-foreground"
+              )}>{stats.needsAction}</span>
             )}
           </button>
         </div>
@@ -872,8 +928,14 @@ function LeadsContent() {
 
             {/* Leads Display */}
             {filteredLeads.length === 0 ? (
-              <div className="text-center py-12 border border-border rounded-xl bg-card text-muted-foreground text-sm">
-                No leads found
+              <div className="flex flex-col items-center justify-center py-12 border border-border rounded-xl bg-card gap-2">
+                <Search className="h-7 w-7 text-muted-foreground opacity-40" />
+                <p className="text-sm text-muted-foreground">No leads found</p>
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors">
+                    Clear search
+                  </button>
+                )}
               </div>
             ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -919,6 +981,9 @@ function LeadsContent() {
               const updatedLead = await response.json()
               setSelectedLead(updatedLead)
               mutate()
+            } else {
+              const data = await response.json().catch(() => ({}))
+              throw new Error(data.error || "Failed to update lead")
             }
           }}
           onSendMessage={async (action, message) => {
@@ -931,6 +996,9 @@ function LeadsContent() {
               const result = await response.json()
               setSelectedLead(result.lead)
               mutate()
+            } else {
+              const data = await response.json().catch(() => ({}))
+              throw new Error(data.error || "Failed to send message")
             }
           }}
           onDelete={async (leadId) => {
@@ -940,6 +1008,9 @@ function LeadsContent() {
             if (response.ok) {
               setSelectedLead(null)
               mutate()
+            } else {
+              const data = await response.json().catch(() => ({}))
+              throw new Error(data.error || "Failed to delete lead")
             }
           }}
         />

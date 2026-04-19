@@ -79,19 +79,7 @@ export interface TeamMember {
   createdAt: string
 }
 
-export interface AppSettings {
-  autoDeleteDeclinedDays: number
-  webhookUrl: string
-  autoApproveEnabled: boolean
-  autoApproveMinRating: number
-  autoDeclineUnrelated: boolean
-  followUpDays: number
-  followUpMessage: string
-  defaultApproveMessage: string
-  defaultDeclineMessage: string
-  defaultUnrelatedMessage: string
-  language: "de" | "en"
-  theme?: string
+interface BaseSettings {
   notificationsEnabled?: boolean
   notifyNewLeads?: boolean
   notifyLeadApproved?: boolean
@@ -109,6 +97,30 @@ export interface AppSettings {
   priorityDetection?: boolean
   duplicateDetection?: boolean
   aiInstructions?: string
+  autoApproveEnabled?: boolean
+  autoApproveMinRating?: number
+  autoDeclineUnrelated?: boolean
+  followUpDays?: number
+  followUpMessage?: string
+  defaultApproveMessage?: string
+  defaultDeclineMessage?: string
+  defaultUnrelatedMessage?: string
+  language?: "de" | "en"
+}
+
+export interface AppSettings extends BaseSettings {
+  autoDeleteDeclinedDays: number
+  webhookUrl: string
+  autoApproveEnabled: boolean
+  autoApproveMinRating: number
+  autoDeclineUnrelated: boolean
+  followUpDays: number
+  followUpMessage: string
+  defaultApproveMessage: string
+  defaultDeclineMessage: string
+  defaultUnrelatedMessage: string
+  language: "de" | "en"
+  theme?: string
 }
 
 export interface Message {
@@ -123,36 +135,10 @@ export interface Message {
 
 export type ContactPlatform = "whatsapp" | "email" | "sms" | "telegram"
 
-export interface TeamSettings {
+export interface TeamSettings extends BaseSettings {
   teamId?: string
   autoDeleteDeclinedDays?: number
   webhookUrl?: string
-  autoApproveEnabled?: boolean
-  autoApproveMinRating?: number
-  autoDeclineUnrelated?: boolean
-  followUpDays?: number
-  followUpMessage?: string
-  defaultApproveMessage?: string
-  defaultDeclineMessage?: string
-  defaultUnrelatedMessage?: string
-  language?: "de" | "en"
-  notificationsEnabled?: boolean
-  notifyNewLeads?: boolean
-  notifyLeadApproved?: boolean
-  notifyLeadDeclined?: boolean
-  notifyManualReview?: boolean
-  notifyDailySummary?: boolean
-  notifyWeeklyReport?: boolean
-  aiEnabled?: boolean
-  autoApprove?: boolean
-  autoDecline?: boolean
-  autoManualReview?: boolean
-  minRatingThreshold?: number
-  autoResponseEnabled?: boolean
-  sentimentAnalysis?: boolean
-  priorityDetection?: boolean
-  duplicateDetection?: boolean
-  aiInstructions?: string
 }
 
 export interface UserSettings {
