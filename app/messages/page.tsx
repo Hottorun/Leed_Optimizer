@@ -111,6 +111,12 @@ function isApprovedLead(lead: Lead): boolean {
   return lead.session?.status === "approved" || lead.status === "approved"
 }
 
+function getConversationSummary(lead: Lead): string {
+  const cd = lead.session?.collectedData
+  if (cd && !Array.isArray(cd) && cd.conversationSummary) return cd.conversationSummary
+  return lead.conversationSummary ?? ""
+}
+
 function buildInitialConversations(leads: Lead[]): ConversationMap {
   const map: ConversationMap = {}
   for (const lead of leads) {
@@ -168,6 +174,20 @@ function SystemDivider({ text }: { text: string }) {
         {text}
       </div>
       <div className="flex-1 h-px bg-border" />
+    </div>
+  )
+}
+
+function ConversationSummaryCard({ summary }: { summary: string }) {
+  if (!summary) return null
+  return (
+    <div className="mx-auto max-w-[75%] my-2">
+      <div className="bg-background border border-border rounded-xl px-4 py-3">
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+          AI Conversation Summary
+        </p>
+        <p className="text-sm text-foreground leading-relaxed">{summary}</p>
+      </div>
     </div>
   )
 }
@@ -384,7 +404,13 @@ export default function MessagesPage() {
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1">
                 {messages.map((msg) => {
                   if (msg.from === "system") {
-                    return <SystemDivider key={msg.id} text={msg.text} />
+                    const summary = getConversationSummary(selectedLead)
+                    return (
+                      <div key={msg.id}>
+                        <SystemDivider text={msg.text} />
+                        <ConversationSummaryCard summary={summary} />
+                      </div>
+                    )
                   }
 
                   const isSent = msg.from === "me"
