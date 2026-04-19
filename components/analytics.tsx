@@ -5,6 +5,7 @@ import { Download } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from "recharts"
 import { cn } from "@/lib/utils"
 import type { Lead } from "@/lib/types"
+import { getSafeString } from "@/lib/lead-utils"
 import { useTheme } from "next-themes"
 
 interface AnalyticsProps {
@@ -49,7 +50,7 @@ export function Analytics({ leads }: AnalyticsProps) {
 
   const getLeadSource = (lead: Lead): string => {
     const collectedData = getCollectedDataFirst(lead.session?.collectedData)
-    if (collectedData?.source) return collectedData.source as string
+    if (typeof collectedData?.source === "string") return collectedData.source
     if (lead.phone) return "whatsapp"
     return "email"
   }
