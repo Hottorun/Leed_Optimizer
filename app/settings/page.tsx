@@ -38,7 +38,7 @@ export default function Settings() {
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [showTeamDialog, setShowTeamDialog] = useState(false)
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
-  const [newMember, setNewMember] = useState({ email: "", name: "", password: "", role: "member" as "admin" | "member" })
+  const [newMember, setNewMember] = useState({ email: "", name: "", phone: "", password: "", role: "member" as "admin" | "member" })
   const [isAddingMember, setIsAddingMember] = useState(false)
   const [teamError, setTeamError] = useState<string | null>(null)
   const [autoDeleteEnabled, setAutoDeleteEnabled] = useState(false)
@@ -166,7 +166,7 @@ export default function Settings() {
       })
       const data = await res.json()
       if (res.ok) {
-        setNewMember({ email: "", name: "", password: "", role: "member" })
+        setNewMember({ email: "", name: "", phone: "", password: "", role: "member" })
         fetchTeamMembers()
       } else {
         setTeamError(data.error || "Failed to add member")
@@ -671,20 +671,24 @@ export default function Settings() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
+                      <Label className="text-xs">Phone <span className="text-muted-foreground">(optional)</span></Label>
+                      <Input type="tel" placeholder="+49 123 456 789" value={newMember.phone} onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })} className="h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
                       <Label className="text-xs">Password</Label>
                       <Input type="password" placeholder="********" value={newMember.password} onChange={(e) => setNewMember({ ...newMember, password: e.target.value })} className="h-9 text-sm" />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Role</Label>
-                      <select
-                        value={newMember.role}
-                        onChange={(e) => setNewMember({ ...newMember, role: e.target.value as "admin" | "member" })}
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      >
-                        <option value="member">Member</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Role</Label>
+                    <select
+                      value={newMember.role}
+                      onChange={(e) => setNewMember({ ...newMember, role: e.target.value as "admin" | "member" })}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
                   </div>
                   <div className="flex justify-end">
                     <Button

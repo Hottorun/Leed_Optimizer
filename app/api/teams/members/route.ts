@@ -52,13 +52,13 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { email, name, password, role } = body
+    const { email, name, phone, password, role } = body
 
     if (!email || !name || !password) {
       return NextResponse.json({ error: "Email, name, and password are required" }, { status: 400 })
     }
 
-    const member = await addTeamMember(user.teamId, email, name, password, role || "member")
+    const member = await addTeamMember(user.teamId, email, name, password, role || "member", phone || "")
     
     if (!member) {
       return NextResponse.json({ error: "Failed to add member" }, { status: 500 })

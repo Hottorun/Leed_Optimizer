@@ -43,6 +43,9 @@ CREATE TRIGGER update_leads_updated_at
 -- Enable Row Level Security (optional - enable if you need user-based access)
 -- ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
 
+-- Migration: add phone column to users table (run once)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '';
+
 -- Insert sample data (optional - remove in production)
 INSERT INTO leads (name, phone, email, location, work_type, conversation_summary, approve_message, decline_message, rating, rating_reason, status)
 VALUES 

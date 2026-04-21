@@ -988,26 +988,30 @@ export async function addTeamMember(
   email: string,
   name: string,
   password: string,
-  role: TeamRole = "member"
+  role: TeamRole = "member",
+  phone: string = ""
 ): Promise<TeamMember | null> {
   const client = getSupabase()
-  
+
   if (!client) {
     return null
   }
 
   const hashedPassword = await hashPassword(password)
 
+  const insertData: Record<string, unknown> = {
+    email,
+    name,
+    password: hashedPassword,
+    role: "user",
+    team_id: teamId,
+    team_role: role,
+  }
+  if (phone) insertData.phone = phone
+
   const { data: userData, error: userError } = await client
     .from("users")
-    .insert({
-      email,
-      name,
-      password: hashedPassword,
-      role: "user",
-      team_id: teamId,
-      team_role: role,
-    })
+    .insert(insertData)
     .select()
     .single()
 
